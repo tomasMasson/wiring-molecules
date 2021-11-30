@@ -2,12 +2,10 @@
 
 "Download Drosophila melanogaster extracellular domain batabase (FlyXCDB) table, published in the Journal of Molecular Biology"
 
+import click
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
-
-# Define the location of the data
-URL = 'http://prodata.swmed.edu/FlyXCDB/info.list.new21_26.html'
 
 def scrape_url(url):
     """
@@ -22,6 +20,9 @@ def scrape_url(url):
 
     # Parse the HTML file with BS4
     soup = BeautifulSoup(html, 'html.parser')
+    
+    # Print a brief report
+    print('FlyXCDB was succesfully scraped')
 
     return soup
 
@@ -60,6 +61,28 @@ def extract_flyxcdb_data(html, output):
     # Save the DataFrame to a CSV file
     df.to_csv(output, index=False)
 
-    print(f"FlyXCDB data has been saved to {output}")
+    print(f"FlyXCDB data has been saved to '{output}'")
 
+# FlyXCDB data URL
+URL = 'http://prodata.swmed.edu/FlyXCDB/info.list.new21_26.html'
 
+# CLI options
+@click.command()
+@click.option('--html',
+              default=URL,
+              help="Url used to scrap the data from FlyXCDB")
+@click.option('--output',
+              default='flyxcdb_data.csv',
+              help='Output name for the scraped table')
+# CLI main function
+def command_line_interface(html, output):
+    """
+    Provides the HTML address and the output file name through the CLI
+    """
+
+    content = scrape_url(html)
+
+    extract_flyxcdb_data(content, output)
+
+if __name__ == '__main__':
+    command_line_interface()
