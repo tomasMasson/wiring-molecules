@@ -67,13 +67,15 @@ def extract_flyxcdb_data(html, output):
 URL = 'http://prodata.swmed.edu/FlyXCDB/info.list.new21_26.html'
 
 # CLI options
-@click.command()
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
 @click.option('--html',
               default=URL,
-              help="Url used to scrap the data from FlyXCDB")
+              help="Url used to scrap the data from FlyXCDB. Default is FlyXCDB URL")
 @click.option('--output',
               default='flyxcdb_data.csv',
-              help='Output name for the scraped table')
+              help="Output name for the scraped table. Defaults is 'flyxcdb_data.csv'")
+
 # CLI main function
 def command_line_interface(html, output):
     """
