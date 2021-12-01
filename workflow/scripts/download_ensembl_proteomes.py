@@ -119,7 +119,7 @@ def command_line_interface(ensembl_list, species):
     """
     Downloads whole-proteome data from Ensembl Genomes based on a list of input identifiers.
 
-    Invacation example:
+    Invocation example:
 
     ./download_ensembl_proteomes.py --ensembl-list ensembl_species_list.tsv --species species_list.csv
     """
