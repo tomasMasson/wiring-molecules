@@ -20,7 +20,7 @@ def scrape_url(url):
 
     # Parse the HTML file with BS4
     soup = BeautifulSoup(html, 'html.parser')
-    
+
     # Print a brief report
     print('FlyXCDB was succesfully scraped')
 
