@@ -1,0 +1,24 @@
+rule download_flyxcdb_data:
+    params:
+        "http://prodata.swmed.edu/FlyXCDB/info.list.new21_26.html"
+    output:
+        "flyxcdb_data.csv"
+    conda:
+        "envs/wiring_evolution.yml"
+    shell:
+        """
+        scripts/download_flyxcdb_data.py --html {params} --output {output}
+        """
+
+rule download_proteome_data:
+    input:
+        "../resources/species_list.csv"
+    output:
+        "../resources/ensembl-list.tsv"
+    conda:
+        "envs/wiring_evolution.yml"
+    shell:
+        """
+        scripts/download_ensembl_proteomes.py --ensembl_list {output} --species {input} \
+        mv *.fa.gz ../resources/
+        """
