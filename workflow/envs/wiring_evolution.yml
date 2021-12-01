@@ -1,0 +1,11 @@
+name: wiring_evolution
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - bs4
+  - click
+  - mamba
+  - pandas
+  - requests
+  - snakemake
