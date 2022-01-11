@@ -11,7 +11,7 @@ import click
 
 def print_sequence_dict(seqs: dict) -> str:
     """
-    Prints a multi sequence dictionary in fasta format.
+    Prints a multi sequence dictionary in fasta format
     """
 
     # Iterate over the sequences dictionary
@@ -43,9 +43,12 @@ def get_longest_isoform(seqs: SeqIO.SeqRecord) -> str:
     Print to standard output the longest isoform for each protein.
     """
 
-    # Read initial sequences into a SeqIO.dict
-    seqs_dict = SeqIO.to_dict(SeqIO.parse(seqs, "fasta"))
-    # Initialize a dict to store the filteres sequences
+    # Read initial sequences into a SeqIO object
+    seqs = SeqIO.parse(seqs, 'fasta')
+    # Initialize a sequence Dict, using faste header as key
+    seqs_dict = SeqIO.to_dict(seqs,
+                              key_function=lambda rec: rec.description)
+    # Initialize a dict to store filtered sequences
     seqs_filt = {}
     # For each sequence in the dict
     for key in seqs_dict:
@@ -66,17 +69,17 @@ def get_longest_isoform(seqs: SeqIO.SeqRecord) -> str:
 
 # Set CLI parameters
 ## Add help page if no variable is provided through th command line
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-@click.command(context_settings=CONTEXT_SETTINGS)
+SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=SETTINGS)
 @click.option("-s",
               "--seqs",
               "sequences",
               help="Sequences to filtered")
 
 # Put all together into a principal function
-def main(sequences):
+def cli(sequences):
     get_longest_isoform(sequences)
 
 
 if __name__ == "__main__":
-    main()
+    cli()
