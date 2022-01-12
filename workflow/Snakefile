@@ -1,6 +1,7 @@
+GENOMES, = glob_wildcards("../resources/{genome}.all.fa")
+
 rule all:
-    input:
-      ""
+    input: expand("../results/evolutionary_conservation/orthology_inference/{genome}.filt.fa", genome=GENOMES)
 
 rule download_flyxcdb_data:
     params:
@@ -13,6 +14,14 @@ rule download_flyxcdb_data:
         """
         scripts/download_flyxcdb_data.py --html {params} --output {output}
         """
+
+rule filter_longest_gene_isoform:
+    input:
+        "../resources/{genome}.all.fa"
+    output:
+        "../results/evolutionary_conservation/orthology_inference/{genome}.filt.fa"
+    shell:
+        "scripts/filter_longest_isoform.py --seqs {input} > {output}"
 
 #rule download_drosophila_12_genomes:
 #    input:
@@ -27,47 +36,47 @@ rule download_flyxcdb_data:
 #        mv *.fa.gz ../resources/
 #        """
 
-rule extract_orthodb_groups:
-    input:
-      "../results/evolutionary_conservation/drosophila_12-genomes/",
-      "../resources/dmel_orthologs_in_drosophila_species_fb_2021_06.tsv"
-    output:
-        "../results/evolutionary_conservation/FBgn*"
-    conda:
-        "envs/wiring_evolution.yml"
-    shell:
-        """
-        scripts/get_orthodb_groups.py --orthogroups {input.og} --sequences {input.seqs} \
-        mv FBgn* ../results/evolutionary_conservation/drosophila_12-genomes/
-        """
-        
-rule translate_cds:
-    input:
-      "../results/evolutionary_conservation/drosophila_12-genomes/{cds}.fna"
-    output:
-      "../results/evolutionary_conservation/drosophila_12-genomes/{cds}.faa"
-    script:
-      "scripts/translate_cds.py --sequences {input} --output {output}"
-
-rule align_multifasta_files:
-    input:
-        "../results/evolutionary_conservation/drosophila_12-genomes/{protein}.faa"
-    output:
-        "../results/evolutionary_conservation/{protein}.aln.faa"
-    conda:
-        "envs/wiring_evolution.yml"
-    shell:
-        """
-        mafft --auto {input} > {output}
-        """
-
-rule compute_evolutionary_rate:
-    input:
-        "../results/evolutionary_conservation/*.aln.fna"
-    output:
-        "../results/evolutionary_conservation/evolutionary_rates.csv"
-    conda:
-        "envs/wiring_evolution.yml"
-    shell:
-        """
-        """
+#rule extract_orthodb_groups:
+#    input:
+#      "../results/evolutionary_conservation/drosophila_12-genomes/",
+#      "../resources/dmel_orthologs_in_drosophila_species_fb_2021_06.tsv"
+#    output:
+#        "../results/evolutionary_conservation/FBgn*"
+#    conda:
+#        "envs/wiring_evolution.yml"
+#    shell:
+#        """
+#        scripts/get_orthodb_groups.py --orthogroups {input.og} --sequences {input.seqs} \
+#        mv FBgn* ../results/evolutionary_conservation/drosophila_12-genomes/
+#        """
+#        
+#rule translate_cds:
+#    input:
+#      "../results/evolutionary_conservation/drosophila_12-genomes/{cds}.fna"
+#    output:
+#      "../results/evolutionary_conservation/drosophila_12-genomes/{cds}.faa"
+#    script:
+#      "scripts/translate_cds.py --sequences {input} --output {output}"
+#
+#rule align_multifasta_files:
+#    input:
+#        "../results/evolutionary_conservation/drosophila_12-genomes/{protein}.faa"
+#    output:
+#        "../results/evolutionary_conservation/{protein}.aln.faa"
+#    conda:
+#        "envs/wiring_evolution.yml"
+#    shell:
+#        """
+#        mafft --auto {input} > {output}
+#        """
+#
+#rule compute_evolutionary_rate:
+#    input:
+#        "../results/evolutionary_conservation/*.aln.fna"
+#    output:
+#        "../results/evolutionary_conservation/evolutionary_rates.csv"
+#    conda:
+#        "envs/wiring_evolution.yml"
+#    shell:
+#        """
+#        """
