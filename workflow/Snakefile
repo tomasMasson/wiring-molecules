@@ -1,8 +1,12 @@
+rule all:
+    input:
+      ""
+
 rule download_flyxcdb_data:
     params:
         "http://prodata.swmed.edu/FlyXCDB/info.list.new21_26.html"
     output:
-        "flyxcdb_data.csv"
+        "../resources/flyxcdb_data.csv"
     conda:
         "envs/wiring_evolution.yml"
     shell:
@@ -10,15 +14,60 @@ rule download_flyxcdb_data:
         scripts/download_flyxcdb_data.py --html {params} --output {output}
         """
 
-rule download_proteome_data:
+#rule download_drosophila_12_genomes:
+#    input:
+#        ""
+#    output:
+#        "../results/evolutionary_conservation/drosophila_12-genomes/"
+#    conda:
+#        "envs/wiring_evolution.yml"
+#    shell:
+#        """
+#        scripts/download_drosophila_12_genomes.py \
+#        mv *.fa.gz ../resources/
+#        """
+
+rule extract_orthodb_groups:
     input:
-        "../resources/species_list.csv"
+      "../results/evolutionary_conservation/drosophila_12-genomes/",
+      "../resources/dmel_orthologs_in_drosophila_species_fb_2021_06.tsv"
     output:
-        "../resources/ensembl-list.tsv"
+        "../results/evolutionary_conservation/FBgn*"
     conda:
         "envs/wiring_evolution.yml"
     shell:
         """
-        scripts/download_ensembl_proteomes.py --ensembl_list {output} --species {input} \
-        mv *.fa.gz ../resources/
+        scripts/get_orthodb_groups.py --orthogroups {input.og} --sequences {input.seqs} \
+        mv FBgn* ../results/evolutionary_conservation/drosophila_12-genomes/
+        """
+        
+rule translate_cds:
+    input:
+      "../results/evolutionary_conservation/drosophila_12-genomes/{cds}.fna"
+    output:
+      "../results/evolutionary_conservation/drosophila_12-genomes/{cds}.faa"
+    script:
+      "scripts/translate_cds.py --sequences {input} --output {output}"
+
+rule align_multifasta_files:
+    input:
+        "../results/evolutionary_conservation/drosophila_12-genomes/{protein}.faa"
+    output:
+        "../results/evolutionary_conservation/{protein}.aln.faa"
+    conda:
+        "envs/wiring_evolution.yml"
+    shell:
+        """
+        mafft --auto {input} > {output}
+        """
+
+rule compute_evolutionary_rate:
+    input:
+        "../results/evolutionary_conservation/*.aln.fna"
+    output:
+        "../results/evolutionary_conservation/evolutionary_rates.csv"
+    conda:
+        "envs/wiring_evolution.yml"
+    shell:
+        """
         """
