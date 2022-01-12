@@ -1,7 +1,7 @@
-GENOMES, = glob_wildcards("../resources/{genome}.all.fa")
+GENOMES, = glob_wildcards("../resources/{genome}.pep.all.fa")
 
 rule all:
-    input: expand("../results/evolutionary_conservation/orthology_inference/{genome}.filt.fa", genome=GENOMES)
+    input: expand("../results/evolutionary_conservation/orthology_inference/{genome}.pep.filt.fa", genome=GENOMES)
 
 rule download_flyxcdb_data:
     params:
@@ -17,11 +17,19 @@ rule download_flyxcdb_data:
 
 rule filter_longest_gene_isoform:
     input:
-        "../resources/{genome}.all.fa"
+        "../resources/{genome}.pep.all.fa"
     output:
-        "../results/evolutionary_conservation/orthology_inference/{genome}.filt.fa"
+        "../results/evolutionary_conservation/orthology_inference/{genome}.pep.filt.fa"
     shell:
         "scripts/filter_longest_isoform.py --seqs {input} > {output}"
+
+rule run_orthofinder:
+    input:
+        "../results/evolutionary_conservation/orthology_inference/"
+    output:
+        "../results/evolutionary_conservation/orthology_inference/Orthofinder/"
+    shell:
+        "orthofinder -f {input}"
 
 #rule download_drosophila_12_genomes:
 #    input:
