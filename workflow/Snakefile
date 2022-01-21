@@ -1,9 +1,11 @@
+from pathlib import Path
+
 GENOMES, = glob_wildcards("../resources/{genome}.all.fa")
 
 rule all:
     input: 
-        "../results/orthology_inference/log_orthofinder.txt",
-        "../results/orthology_inference/cds_database.fna"
+        "../results/orthology_inference/Log.txt",
+        "../results/orthology_inference/proteome_cds_database.fna"
 
 rule download_flyxcdb_data:
     params:
@@ -29,7 +31,7 @@ rule aggregate_coding_sequences:
     input:
         expand("../results/orthology_inference/{genome}.all.fa", genome=GENOMES)
     output:
-        "../results/orthology_inference/cds_database.fna"
+        "../results/orthology_inference/proteome_cds_database.fna"
     shell:
         "cat {input} > {output}"
 
@@ -39,7 +41,7 @@ rule translate_cds_proteomes:
     output:
         "../results/orthology_inference/{genome}.faa"
     shell:
-        "scripts/translate_cds.py --seqs {input} > {output}"
+        "scripts/translate_cds.py --seqs {input} --output {output}"
 
 rule run_orthofinder:
     input:
@@ -47,6 +49,20 @@ rule run_orthofinder:
     params:
         "../results/orthology_inference/"
     output:
-        "../results/orthology_inference/log_orthofinder.txt"
+        "../results/orthology_inference/Log.txt"
     shell:
-        "orthofinder -f {params} > {output}"
+        """
+        orthofinder -f {params} -n of > {output} && \
+        mv {params}/OrthoFinder/Results_of/* {params} && \
+        rm -rf {params}OrthoFinder/
+        """
+
+#rule filter_singlecopy_orthogroups:
+#    input:
+#        "../results/orthology_inference/OrthoFinder/Results_Jan16/Orthogroups/Orthogroups.tsv",
+#        "../results/orthology_inference/OrthoFinder/Results_Jan16/Orthogroups/Orthogroups_SingleCopyOrthologues.txt",
+#        "../results/orthology_inference/cds_database.fna"
+#    output:
+#        ""
+#    shell:
+#        ""
