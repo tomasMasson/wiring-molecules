@@ -19,7 +19,7 @@ rule diamond_scoring:
     output:
         "../results/phylogenetic_profiles/{PROTS}_results.tsv"
     shell:
-        "diamond blastp --query {input.proteome} --db {input.db} --max-target-seqs 1 --ultra-sensitive --outfmt 6"
+        "diamond blastp --query {input.proteome} --db {input.db} --max-target-seqs 1 --ultra-sensitive --outfmt 6 --out {output}"
 
 rule aggregate_diamond_scoring:
     input:
