@@ -7,6 +7,7 @@ standarized scores
 
 import click
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -35,14 +36,17 @@ def process_similarity_scores(matrix, output):
     df.index = indexes
     # Fill NaN values
     df = df.fillna(20.4)
-    # Normalize blastp scores to Human reference values
-    gene_norm = df["HUMAN"]
+    # Normalize blastp scores to Drosophila melanogaster values
+    gene_norm = df["DROME"]
     df_n = df.divide(gene_norm, axis="index")
     # Normalize for species divergence (Z-scaling across columns)
     df_n = df_n.subtract(df_n.mean(axis=0), axis=1).divide(df_n.std(axis=0), axis=1)
     # Save matrix to output file
-    df_n = df_n.drop('HUMAN', axis=1)
-    matrix = df.T.corr(method='pearson')
+    df_n = df_n.drop('DROME', axis=1)
+    array = df_n.to_numpy()
+    print("Computing correlations")
+    matrix = np.corrcoef(array)
+    # matrix = df.T.corr(method='pearson')
     p = sns.heatmap(matrix, annot=True)
     p.savefig("tmp.png")
 
