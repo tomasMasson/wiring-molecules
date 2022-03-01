@@ -3,9 +3,13 @@ channels:
   - bioconda
   - conda-forge
 dependencies:
+  - bio
   - bs4
   - click
+  - hyphy
   - mamba
+  - numpy
   - pandas
+  - r-biomartr
   - requests
   - snakemake

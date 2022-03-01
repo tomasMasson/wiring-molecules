@@ -56,13 +56,3 @@ rule run_orthofinder:
         mv {params}/OrthoFinder/Results_of/* {params} && \
         rm -rf {params}OrthoFinder/
         """
-
-#rule filter_singlecopy_orthogroups:
-#    input:
-#        "../results/orthology_inference/OrthoFinder/Results_Jan16/Orthogroups/Orthogroups.tsv",
-#        "../results/orthology_inference/OrthoFinder/Results_Jan16/Orthogroups/Orthogroups_SingleCopyOrthologues.txt",
-#        "../results/orthology_inference/cds_database.fna"
-#    output:
-#        ""
-#    shell:
-#        ""
