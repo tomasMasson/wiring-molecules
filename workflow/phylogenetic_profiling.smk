@@ -2,7 +2,7 @@ PROTS, = glob_wildcards("../resources/{proteome}.fasta")
 
 rule all:
     input:
-        "../results/phylogenetic_profiles/diamond_results.tsv"
+        "../results/phylogenetic_profiles/similarity_matrix.txt"
 
 rule make_diamond_db:
     input:
@@ -25,6 +25,14 @@ rule aggregate_diamond_scoring:
     input:
         expand("../results/phylogenetic_profiles/{proteomes}_results.tsv", proteomes=PROTS)
     output:
-        "{OUTDIR}diamond_results.tsv"
+        "../results/phylogenetic_profiles/diamond_results.tsv"
     shell:
         "cat {input} >> {output}"
+
+rule process_similarity_scores:
+    input:
+        "../results/phylogenetic_profiles/diamond_results.tsv"
+    output:
+        "../results/phylogenetic_profiles/similarity_matrix.txt"
+    shell:
+        "./scripts/process_similarity_scores.py --input {input} --output {output}"
