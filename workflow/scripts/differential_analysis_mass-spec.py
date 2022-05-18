@@ -19,10 +19,16 @@ def get_go_terms(go_terms):
     """
 
     # Neuronal cell surface localization set
-    surface = ["axons", "basal plasma membrane", "basolateral plasma membrane", "cell surface", "dendrite", "dendritic spine", "extracellular region", "extracellular space", "gap junction", "synapse", "plasma membrane", "neuron projection", "postsynaptic density", "postsynaptic membrane", "presynapse", "presynaptic membrane"]
+    surface = ["axons", "basal plasma membrane", "basolateral plasma membrane",
+               "cell surface", "dendrite", "dendritic spine",
+               "extracellular region", "extracellular space", "gap junction",
+               "synapse", "plasma membrane", "neuron projection",
+               "postsynaptic density", "postsynaptic membrane", "presynapse",
+               "presynaptic membrane"]
 
     # Non surface localizations set
-    non_surface = ["cytoplasm", "nucleus", "mitochondrial inner membrane", "mitochondrial membrane", "mitochondrial matrix"]
+    non_surface = ["cytoplasm", "nucleus", "mitochondrial inner membrane",
+                   "mitochondrial membrane", "mitochondrial matrix"]
 
     return (go_terms
             [go_terms["GO NAME"].isin(surface)]
@@ -35,7 +41,7 @@ def get_go_terms(go_terms):
 
 def load_go_terms(go_terms_table):
     """
-    Ingests and filters the GO terms table to keep only IDs and GENE PRODUCT names
+    Ingests and filters the GO terms table to keep only ID and GENE PRODUCT names
 
     Returns a tuple with the lists for surface and non-surface proteins
     """
@@ -96,6 +102,9 @@ def plot_ratiometric_analysis(df, sample, control):
     # Set color palette
     TP_COLOR = "#fdb462"
     FP_COLOR = "#000000"
+    # Compute pvalue and AUC score
+    pvalue = str(np.round(ranksums(df.tpr, df.fpr, alternative="greater")[1], 2))
+    auc = str(np.round(np.trapz(df.tpr, df.fpr), 4))
     # Define curve for random classifier
     line = pd.DataFrame({"x": np.linspace(0, 1, 10),
                          "y": np.linspace(0, 1, 10)})
@@ -139,7 +148,7 @@ def plot_ratiometric_analysis(df, sample, control):
                  xlabel=f"log10({sample}/{control})",
                  ylabel="TPR-FPR")
 
-    r = roc * roc_random
+    r = roc * roc_random * hv.Text(0.3, 1.0, f"AUC={auc}")
     r.opts(legend_position="bottom_right")
     p = r + tp_dist * fp_dist + tpr_fpr
     hv.save(p, "plot.html", backend="bokeh")
