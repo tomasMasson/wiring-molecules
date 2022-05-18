@@ -2,43 +2,93 @@
 
 """
 Process TMT mass spectrometry abundance values
-and plot the ROC curves for the samples.
+and plot ROC curves for the samples.
 """
 
+import click
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 import holoviews as hv
-hv.extension("bokeh")
 from scipy.stats import ranksums
+hv.extension("bokeh")
 
 
-def compute_signal_ratio(sample, control):
+def get_go_terms(go_terms):
     """
-    Normalize sample intensity with respect to some
-    arbitrary control. Signal ratio is expressed as
-    log10.
-    """
-
-    s = pd.to_numeric(sample)
-    c = pd.to_numeric(control)
-    ratio = s.subtract(c)
-
-    return ratio
-
-
-def rank_dataframe(df, key):
-    """
-    Sorts a DataFrame in descending order based on key
-    parameter
+    Returns a series with GO terms related with the specified localization
     """
 
-    dfr = df.sort_values(by=[key], ascending=False)
-    return dfr
+    # Neuronal cell surface localization set
+    surface = ["axons", "basal plasma membrane", "basolateral plasma membrane", "cell surface", "dendrite", "dendritic spine", "extracellular region", "extracellular space", "gap junction", "synapse", "plasma membrane", "neuron projection", "postsynaptic density", "postsynaptic membrane", "presynapse", "presynaptic membrane"]
+
+    # Non surface localizations set
+    non_surface = ["cytoplasm", "nucleus", "mitochondrial inner membrane", "mitochondrial membrane", "mitochondrial matrix"]
+
+    return (go_terms
+            [go_terms["GO NAME"].isin(surface)]
+            ["GENE PRODUCT ID"],
+            go_terms
+            [go_terms["GO NAME"].isin(non_surface)]
+            ["GENE PRODUCT ID"]
+            )
 
 
-def plot_ratiometric_analysis(df, s_name, c_name):
+def load_go_terms(go_terms_table):
+    """
+    Ingests and filters the GO terms table to keep only IDs and GENE PRODUCT names
+
+    Returns a tuple with the lists for surface and non-surface proteins
+    """
+
+    df = pd.read_csv(go_terms_table,
+                     sep="\t",
+                     usecols=["GO NAME", "GENE PRODUCT ID"])
+    return get_go_terms(df)
+
+
+def dedup_protein_ids(df):
+    """
+    Transform a column with multiple proteins identifiers into a column with only one
+    """
+
+    return (df.assign(Protein_id=df.Protein_id
+            .str.split(";", 1, expand=True)[0])
+            )
+
+
+def compute_tp_fp(data, sample, control, go_terms):
+    """
+    Calculates true positives and false positives for the sample and control
+    """
+
+    # Load GO terms data
+    go_terms_tp, go_terms_fp = load_go_terms(go_terms)
+    # Load TMT quantification and remove missing values
+    return (data
+            .dropna()
+            .pipe(dedup_protein_ids)
+            .assign(signal_ratio=data[sample]-data[control],
+                    tp=data.Protein_id.isin(go_terms_tp).astype("int"),
+                    fp=data.Protein_id.isin(go_terms_fp).astype("int"),
+                    )
+            .sort_values(by=["signal_ratio"], ascending=False)
+            )
+
+
+def compute_tpr_fpr(df):
+    """
+    Calculates true positives and false positives for the sample and control
+    """
+
+    return (df
+            .assign(tpr=df.tp.cumsum() / df.tp.sum(),
+                    fpr=df.fp.cumsum() / df.fp.sum(),
+                    tpr_fpr=(df.tp.cumsum() / df.tp.sum() - df.fp.cumsum() / df.fp.sum())
+                    )
+            )
+
+
+def plot_ratiometric_analysis(df, sample, control):
     """
     pass
     """
@@ -46,16 +96,17 @@ def plot_ratiometric_analysis(df, s_name, c_name):
     # Set color palette
     TP_COLOR = "#fdb462"
     FP_COLOR = "#000000"
-    # Define reference line for ROC curve
+    # Define curve for random classifier
     line = pd.DataFrame({"x": np.linspace(0, 1, 10),
                          "y": np.linspace(0, 1, 10)})
-    # Plot ROC curve
-    roc = hv.Curve((df.FPR, df.TPR),
+    # Plot ROC curve for sample
+    roc = hv.Curve((df.fpr, df.tpr),
                    ("FPR"),
                    ("TPR"),
                    group="ROC Curve",
-                   label=f"{s_name}")
+                   label=f"{sample}")
     roc.opts(color=TP_COLOR)
+    # Plot ROC curve for random classifier
     roc_random = hv.Curve((line.x, line.y),
                           ("FPR"),
                           ("TPR"),
@@ -65,27 +116,27 @@ def plot_ratiometric_analysis(df, s_name, c_name):
                     line_dash="dotted")
 
     # Get true positive data points
-    tp = df[df["TP"] == 1]
-    frequencies, edges = np.histogram(tp.Signal_ratio, bins=20, range=(-1.5, 1.5), density=True)
+    tp = df[df.tp == 1]
+    frequencies, edges = np.histogram(tp.signal_ratio, bins=20, range=(-1.5, 1.5), density=True)
     tp_dist = hv.Histogram((edges, frequencies))
     tp_dist.opts(color=TP_COLOR,
                  alpha=0.5,
-                 xlabel=f"log10({s_name}/{c_name})",
+                 xlabel=f"log10({sample}/{control})",
                  ylabel="Density",
                  xlim=(-1.5, 1.5))
     # Get false positive data points
-    fp = df[df["FP"] == 1]
-    frequencies, edges = np.histogram(fp.Signal_ratio, bins=20, range=(-1.5, 1.5), density=True)
+    fp = df[df.fp == 1]
+    frequencies, edges = np.histogram(fp.signal_ratio, bins=20, range=(-1.5, 1.5), density=True)
     fp_dist = hv.Histogram((edges, frequencies))
     fp_dist.opts(color=FP_COLOR,
                  alpha=0.5,
-                 xlabel=f"log10({s_name}/{c_name})",
+                 xlabel=f"log10({sample}/{control})",
                  ylabel="Density",
                  xlim=(-1.5, 1.5))
 
-    tpr_fpr = hv.Curve((df.Signal_ratio, df["TPR-FPR"]))
+    tpr_fpr = hv.Curve((df.signal_ratio, df["tpr_fpr"]))
     tpr_fpr.opts(color=TP_COLOR,
-                 xlabel=f"log10({s_name}/{c_name})",
+                 xlabel=f"log10({sample}/{control})",
                  ylabel="TPR-FPR")
 
     r = roc * roc_random
@@ -93,92 +144,34 @@ def plot_ratiometric_analysis(df, s_name, c_name):
     p = r + tp_dist * fp_dist + tpr_fpr
     hv.save(p, "plot.html", backend="bokeh")
 
-    # fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
-    # # Compute Area Under the Curve (AUC) value
-    # auc = np.trapz(df.TPR, df.FPR)
-    # # Calculate Wilcoxon rank-sum significance value
-    # pvalue = np.round(ranksums(df.TPR, df.FPR, alternative="greater")[1], 3)
-    # # Plot receiver operating characteristic curve
-    # line = pd.DataFrame({"x": np.linspace(0, 1, 10),
-    #                      "y": np.linspace(0, 1, 10)})
-    # sns.lineplot(data=df, x="FPR", y="TPR", ax=ax1)
-    # sns.lineplot(data=line, x="x", y="y", ax=ax1)
-    # ax1.text(0.1, 1.0, pvalue)
-    # # Plot True and False positives distributions
-    # dff = df[df["TP"] == 1]
-    # sns.histplot(data=dff.Signal_ratio,
-    #              stat="probability",
-    #              color="#1f78b4",
-    #              bins=30,
-    #              ax=ax2)
-    # dff = df[df["FP"] == 1]
-    # sns.histplot(data=dff.Signal_ratio,
-    #              stat="probability",
-    #              color="#b2df8a",
-    #              bins=30,
-    #              ax=ax2)
-    # # Plot TRP-FPR vs intensity ratio curve
-    # sns.lineplot(data=df, x="Signal_ratio", y="TPR-FPR", ax=ax3)
-    # # plt.show()
-    # plt.savefig(f"{sample_name}.png")
-    # plt.close()
+
+# CLI options
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
-def compute_ratiometric_analysis(data, sample, control, go_terms):
+# Command line interface options
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.option("-d", "--data",
+              help="TMT quantification data")
+@click.option("-s", "--sample",
+              help='Sample to run the analysis ["t4_1", "t4_2", "t5_1", "t5_2"]')
+@click.option("-c", "--control",
+              help='Control to normalize the analysis ["hrp_1", "h2o2_1", "hrp_2", "h2o2_2"]')
+@click.option("-g", "--go_terms",
+              help="GO terms table")
+# CLI main function
+def cli(data, sample, control, go_terms):
     """
-    Calculates the True Positive and False Positive rates
-    (TPR and FPR, respectively) for the sample and control.
+    Command line interface to set ratiometric analysis and plot data
     """
 
-    # Load TMT quantification
-    df = pd.read_csv(data, sep="\t")
-    # Discard missing values
-    df = df.dropna()
-    # Assign an unique IDs for each protein
-    df["Protein_unique_id"] = df["Protein_id"].str.split(";", 1, expand=True)[0]
-
-    # Load GO terms annotations
-    go_terms = pd.read_csv(go_terms, sep="\t")
-    # True positive terms set
-    tp_list = ["axons", "basal plasma membrane", "basolateral plasma membrane", "cell surface", "dendrite", "dendritic spine", "extracellular region", "extracellular space", "gap junction", "synapse", "plasma membrane", "neuron projection", "postsynaptic density", "postsynaptic membrane", "presynapse", "presynaptic membrane"]
-    go_terms_tp = go_terms[go_terms["GO NAME"].isin(tp_list)]
-    # False positive terms set
-    # fp_list = ["cytoplasm", "nucleus", "mitochondrial inner membrane", "mitochondrial membrane", "mitochondrial matrix"]
-    fp_list = ["cytoplasm", "nucleus", "mitochondria", "mitochondrial matrix"]
-    go_terms_fp = go_terms[go_terms["GO NAME"].isin(fp_list)]
-    # Compute TP and FP in sample data
-    df["TP"] = df["Protein_unique_id"].isin(go_terms_tp["GENE PRODUCT ID"]).astype("int")
-    df["FP"] = df["Protein_unique_id"].isin(go_terms_fp["GENE PRODUCT ID"]).astype("int")
-
-    # Compute signal ratio
-    df["Signal_ratio"] = compute_signal_ratio(df[sample], df[control])
-    # Rank DataFrame based on intensity ratios
-    df = rank_dataframe(df, "Signal_ratio")
-    # Compute TPR and FPR counts and differences
-    df["TPR"] = df["TP"].cumsum() / df["TP"].sum()
-    df["FPR"] = df["FP"].cumsum() / df["FP"].sum()
-    df["TPR-FPR"] = df["TPR"] - df["FPR"]
-    # Keep only relevant columns
-    dff = df.loc[:, ["Protein_unique_id", "Gene_name", "TP", "FP", "TPR", "FPR", "TPR-FPR", "Signal_ratio"]]
-    # Get signal ratio cutoff from the maximal difference between TPR and FPR
-    idxmax = df["TPR-FPR"].idxmax()
-    tpr_fpr_max = dff.loc[idxmax, "TPR-FPR"]
-    sample_name = f"{sample}_{control}"
-    plot_ratiometric_analysis(dff, sample, control)
-    dff["Significant"] = df["Signal_ratio"] > tpr_fpr_max
-    dff.loc[:, "Sample"] = sample_name
-    dff.to_csv(f"{sample_name}.csv", index=False)
-
-    return dff
+    data = pd.read_csv(data, sep="\t")
+    return (data
+            .pipe(compute_tp_fp, sample, control, go_terms)
+            .pipe(compute_tpr_fpr)
+            .pipe(plot_ratiometric_analysis, sample, control)
+            )
 
 
-# for sample in ["t4_1", "t4_2", "t5_1", "t5_2"]:
-for sample in ["t4_1"]:
-    # for control in ["hrp_1", "h2o2_1", "hrp_2", "h2o2_2"]:
-    for control in ["hrp_1"]:
-        print(sample, control)
-        DATA = "resources/t4t5_mass-spec_dataset.csv"
-        SAMPLE = sample
-        CONTROL = control
-        GO_TERMS = "resources/QuickGO-annotations-1652225849796-20220510.tsv"
-        compute_ratiometric_analysis(DATA, SAMPLE, CONTROL, GO_TERMS)
+if __name__ == '__main__':
+    cli()
