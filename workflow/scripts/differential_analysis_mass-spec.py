@@ -11,6 +11,7 @@ import pandas as pd
 import holoviews as hv
 from scipy.stats import ranksums
 hv.extension("bokeh")
+hv.renderer('matplotlib')
 
 
 def get_go_terms(go_terms):
@@ -94,6 +95,19 @@ def compute_tpr_fpr(df):
             )
 
 
+def save_significant_proteins(df, sample, control):
+    """
+    """
+
+    # print(df[df.signal_ratio > df.loc[df.tpr_fpr.idxmax(), "signal_ratio"]])
+    (df
+     [df.signal_ratio > df.loc[df.tpr_fpr.idxmax(), "signal_ratio"]]
+     .to_csv(f"{sample}_{control}.csv", index=False)
+     )
+
+    return df
+
+
 def plot_ratiometric_analysis(df, sample, control):
     """
     pass
@@ -151,7 +165,10 @@ def plot_ratiometric_analysis(df, sample, control):
     r = roc * roc_random * hv.Text(0.3, 1.0, f"AUC={auc}")
     r.opts(legend_position="bottom_right")
     p = r + tp_dist * fp_dist + tpr_fpr
-    hv.save(p, "plot.html", backend="bokeh")
+    # renderer = hv.plotting.mpl.MPLRenderer.instance(dpi=400)
+    # renderer.save(p, f'{sample}_{control}', fmt='svg')
+    # p_plot = renderer.get_plot(p)
+    hv.save(p, f'{sample}_{control}.png')
 
 
 # CLI options
@@ -178,6 +195,7 @@ def cli(data, sample, control, go_terms):
     return (data
             .pipe(compute_tp_fp, sample, control, go_terms)
             .pipe(compute_tpr_fpr)
+            .pipe(save_significant_proteins, sample, control)
             .pipe(plot_ratiometric_analysis, sample, control)
             )
 
