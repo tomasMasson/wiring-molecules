@@ -53,6 +53,23 @@ def load_go_terms(go_terms_table):
     return get_go_terms(df)
 
 
+def map_identifiers(df, df2):
+
+    ids = df.Protein_id.str.split(";")
+    d = {}
+    for recs in ids.iteritems():
+        for rec in recs[1]:
+            rec = rec.split('-')[0]
+            mp = df2[df2.UniprotKB == rec].UniprotKB
+            if len(mp) > 0:
+                d[recs[0]] = list(mp)[0]
+                break
+    dff = df.rename(index=d)
+    dff["Protein_id"] = dff.index
+    print(dff.Protein_id)
+    return dff
+
+
 def dedup_protein_ids(df):
     """
     Transform a column with multiple proteins identifiers into a column with only one
@@ -63,7 +80,7 @@ def dedup_protein_ids(df):
             )
 
 
-def compute_tp_fp(data, sample, control, go_terms):
+def compute_tp_fp(data, map, sample, control, go_terms):
     """
     Calculates true positives and false positives for the sample and control
     """
@@ -73,10 +90,13 @@ def compute_tp_fp(data, sample, control, go_terms):
     # Load TMT quantification and remove missing values
     return (data
             .dropna()
-            .pipe(dedup_protein_ids)
+            .pipe(map_identifiers, map)
+            # .pipe(dedup_protein_ids)
             .assign(signal_ratio=data[sample]-data[control],
                     tp=data.Protein_id.isin(go_terms_tp).astype("int"),
+                    # tp=data.index.isin(go_terms_tp).astype("int"),
                     fp=data.Protein_id.isin(go_terms_fp).astype("int"),
+                    # fp=data.index.isin(go_terms_fp).astype("int"),
                     )
             .sort_values(by=["signal_ratio"], ascending=False)
             )
@@ -179,6 +199,8 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.option("-d", "--data",
               help="TMT quantification data")
+@click.option("-m", "--map",
+              help="Identifiers mapping")
 @click.option("-s", "--sample",
               help='Sample to run the analysis ["t4_1", "t4_2", "t5_1", "t5_2"]')
 @click.option("-c", "--control",
@@ -186,14 +208,15 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option("-g", "--go_terms",
               help="GO terms table")
 # CLI main function
-def cli(data, sample, control, go_terms):
+def cli(data, map, sample, control, go_terms):
     """
     Command line interface to set ratiometric analysis and plot data
     """
 
     data = pd.read_csv(data, sep="\t")
+    map = pd.read_csv(map)
     return (data
-            .pipe(compute_tp_fp, sample, control, go_terms)
+            .pipe(compute_tp_fp, map, sample, control, go_terms)
             .pipe(compute_tpr_fpr)
             .pipe(save_significant_proteins, sample, control)
             .pipe(plot_ratiometric_analysis, sample, control)
