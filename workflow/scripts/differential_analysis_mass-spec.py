@@ -16,87 +16,56 @@ hv.renderer('matplotlib')
 
 def get_go_terms(go_terms):
     """
-    Returns a series with GO terms related with the specified localization
+    Returns the true and negative localization proteins sets
     """
-
-    # Neuronal cell surface localization set
-    surface = ["axons", "basal plasma membrane", "basolateral plasma membrane",
-               "cell surface", "dendrite", "dendritic spine",
-               "extracellular region", "extracellular space", "gap junction",
-               "synapse", "plasma membrane", "neuron projection",
-               "postsynaptic density", "postsynaptic membrane", "presynapse",
-               "presynaptic membrane"]
-
-    # Non surface localizations set
-    non_surface = ["cytoplasm", "nucleus", "mitochondrial inner membrane",
-                   "mitochondrial membrane", "mitochondrial matrix"]
 
     return (go_terms
-            [go_terms["GO NAME"].isin(surface)]
-            ["GENE PRODUCT ID"],
+            [go_terms["annotation"] == "TP"]
+            ["protein"],
             go_terms
-            [go_terms["GO NAME"].isin(non_surface)]
-            ["GENE PRODUCT ID"]
+            [go_terms["annotation"] == "FP"]
+            ["protein"]
             )
-
-
-def load_go_terms(go_terms_table):
-    """
-    Ingests and filters the GO terms table to keep only ID and GENE PRODUCT names
-
-    Returns a tuple with the lists for surface and non-surface proteins
-    """
-
-    df = pd.read_csv(go_terms_table,
-                     sep="\t",
-                     usecols=["GO NAME", "GENE PRODUCT ID"])
-    return get_go_terms(df)
 
 
 def map_identifiers(df, df2):
 
-    ids = df.Protein_id.str.split(";")
-    d = {}
-    for recs in ids.iteritems():
-        for rec in recs[1]:
-            rec = rec.split('-')[0]
-            mp = df2[df2.UniprotKB == rec].UniprotKB
+    # Initialize a dict to store mappings
+    map_dic = {}
+    # Scan all the protein ids on the table
+    for recs in df.Protein_id.iteritems():
+        for rec in recs[1].split(";"):
+            # Map to FlyBase
+            mp = df2[df2.uniprot == rec].flybase
+            # Save positive results to the dict
             if len(mp) > 0:
-                d[recs[0]] = list(mp)[0]
+                map_dic[recs[0]] = list(mp)[0]
                 break
-    dff = df.rename(index=d)
-    dff["Protein_id"] = dff.index
-    print(dff.Protein_id)
-    return dff
 
-
-def dedup_protein_ids(df):
-    """
-    Transform a column with multiple proteins identifiers into a column with only one
-    """
-
-    return (df.assign(Protein_id=df.Protein_id
-            .str.split(";", 1, expand=True)[0])
+    # Output results as a DataFrame with a new "Protein_id" column
+    return (df
+            .drop("Protein_id", axis=1)
+            .rename(index=map_dic)
+            .reset_index()
+            .rename(columns={"index": "Protein_id"})
             )
 
 
-def compute_tp_fp(data, map, sample, control, go_terms):
+def compute_tp_fp(data, mappings, localization, sample, control):
     """
     Calculates true positives and false positives for the sample and control
     """
 
+    # Load TMT quantification and map UniProt accession to FlyBase
+    data = map_identifiers(data.dropna(), mappings)
     # Load GO terms data
-    go_terms_tp, go_terms_fp = load_go_terms(go_terms)
-    # Load TMT quantification and remove missing values
+    go_terms_tp, go_terms_fp = get_go_terms(localization)
+    # Compute TP, FP and signal ratios
     return (data
             .dropna()
-            .pipe(map_identifiers, map)
-            # .pipe(dedup_protein_ids)
             .assign(signal_ratio=data[sample]-data[control],
-                    tp=data.Protein_id.isin(go_terms_tp).astype("int"),
-                    # tp=data.index.isin(go_terms_tp).astype("int"),
                     fp=data.Protein_id.isin(go_terms_fp).astype("int"),
-                    # fp=data.index.isin(go_terms_fp).astype("int"),
+                    tp=data.Protein_id.isin(go_terms_tp).astype("int"),
                     )
             .sort_values(by=["signal_ratio"], ascending=False)
             )
@@ -117,9 +86,9 @@ def compute_tpr_fpr(df):
 
 def save_significant_proteins(df, sample, control):
     """
+    Write the proteins that are above the maximum TPR-FPR threshold
     """
 
-    # print(df[df.signal_ratio > df.loc[df.tpr_fpr.idxmax(), "signal_ratio"]])
     (df
      [df.signal_ratio > df.loc[df.tpr_fpr.idxmax(), "signal_ratio"]]
      .to_csv(f"{sample}_{control}.csv", index=False)
@@ -130,7 +99,7 @@ def save_significant_proteins(df, sample, control):
 
 def plot_ratiometric_analysis(df, sample, control):
     """
-    pass
+    Save diagnostic plot for the ratiometric analysis
     """
 
     # Set color palette
@@ -185,42 +154,49 @@ def plot_ratiometric_analysis(df, sample, control):
     r = roc * roc_random * hv.Text(0.3, 1.0, f"AUC={auc}")
     r.opts(legend_position="bottom_right")
     p = r + tp_dist * fp_dist + tpr_fpr
-    # renderer = hv.plotting.mpl.MPLRenderer.instance(dpi=400)
-    # renderer.save(p, f'{sample}_{control}', fmt='svg')
-    # p_plot = renderer.get_plot(p)
     hv.save(p, f'{sample}_{control}.png')
 
 
-# CLI options
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
-
-# Command line interface options
-@click.command(context_settings=CONTEXT_SETTINGS)
-@click.option("-d", "--data",
-              help="TMT quantification data")
-@click.option("-m", "--map",
-              help="Identifiers mapping")
-@click.option("-s", "--sample",
-              help='Sample to run the analysis ["t4_1", "t4_2", "t5_1", "t5_2"]')
-@click.option("-c", "--control",
-              help='Control to normalize the analysis ["hrp_1", "h2o2_1", "hrp_2", "h2o2_2"]')
-@click.option("-g", "--go_terms",
-              help="GO terms table")
-# CLI main function
-def cli(data, map, sample, control, go_terms):
+def run_analysis(data, mappings, localizations, sample, control):
     """
-    Command line interface to set ratiometric analysis and plot data
+    Ratiometric analysis and plot data
     """
 
+    # Load the data, mappings and localization datasets
     data = pd.read_csv(data, sep="\t")
-    map = pd.read_csv(map)
+    mappings = pd.read_csv(mappings,
+                           sep="\t",
+                           names=["uniprot", "flybase"])
+    localizations = pd.read_csv(localizations)
+
+    # Perform ratiometric analysis
     return (data
-            .pipe(compute_tp_fp, map, sample, control, go_terms)
+            .pipe(compute_tp_fp, mappings, localizations, sample, control)
             .pipe(compute_tpr_fpr)
             .pipe(save_significant_proteins, sample, control)
             .pipe(plot_ratiometric_analysis, sample, control)
             )
+
+
+# Command line interface options
+@click.command()
+@click.option("-d", "--data",
+              help="TMT quantification data")
+@click.option("-m", "--mappings",
+              help="Identifiers mapping")
+@click.option("-l", "--localizations",
+              help="Reference list with True Positives (TP) and False Positives (FP) for protein localizations")
+@click.option("-s", "--sample",
+              help='Sample to run the analysis ["t4_1", "t4_2", "t5_1", "t5_2"]')
+@click.option("-c", "--control",
+              help='Control samples to normalize the analysis ["hrp_1", "h2o2_1", "hrp_2", "h2o2_2"]')
+# CLI main function
+def cli(data, mappings, localizations, sample, control):
+    """
+    Command line interface
+    """
+
+    run_analysis(data, mappings, localizations, sample, control)
 
 
 if __name__ == '__main__':
