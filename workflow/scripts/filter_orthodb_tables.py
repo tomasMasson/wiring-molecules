@@ -4,6 +4,21 @@
 
 import click
 import pandas as pd
+from Bio import SeqIO
+
+
+def get_protein_names(multifasta, output):
+    """
+    Creates a CSV file with the protein ID (Flybase) and its name
+    """
+
+    seqs = SeqIO.parse(multifasta, "fasta")
+    with open(output, "w") as fh:
+        for seq in seqs:
+            description = seq.description
+            protein_name = description.split(";")[3].split("name=")[1]
+            fh.write(f"{seq.id},{protein_name}\n")
+
 
 
 def filter_orthogroups(ogs, taxid):
@@ -93,6 +108,11 @@ def add_gene_annotations(fgenes, annotations, species):
     # Write final table to CSV
     mdf.to_csv("diptera_orthogroups.csv", sep="\t")
 
+    mdf_dmel = mdf[mdf["Scientific_name"] == "Drosophila melanogaster"]
+    genes_map = pd.read_csv("diamond_search_dmel_proteome", sep="\t", usecols=[0, 1], names=["OG", "Gene_name"])
+    mdf_dmel =mdf_dmel.set_index("Gene_ID").join(genes_map.set_index("Gene_ID"))
+    names = get_protein_names("dmel_proteome", "dmel_proteins_names")
+    mdf_dmel = pd.merge(mdf_dmel, names, on="Gene_name")
 
 # CLI options
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -113,7 +133,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 # CLI main function
 def command_line_interface(orthogroups, taxid, og2genes, genes, species):
     """
-    Computes proteins members of each orthogroup at OrthoDB for a given taxon (e.g. Diptera)
+    Computes proteins members of each orthogroup at OrthoDB for a given taxon
     """
 
     ogs = filter_orthogroups(orthogroups, taxid)
