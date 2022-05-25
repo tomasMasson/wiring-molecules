@@ -79,7 +79,8 @@ def compute_tpr_fpr(df):
     return (df
             .assign(tpr=df.tp.cumsum() / df.tp.sum(),
                     fpr=df.fp.cumsum() / df.fp.sum(),
-                    tpr_fpr=(df.tp.cumsum() / df.tp.sum() - df.fp.cumsum() / df.fp.sum())
+                    tpr_fpr=(df.tp.cumsum() / df.tp.sum() - df.fp.cumsum() / df.fp.sum()),
+                    fdr=((df.fp.cumsum() / df.fp.sum()) / (df.tp.cumsum() / df.tp.sum()))
                     )
             )
 
