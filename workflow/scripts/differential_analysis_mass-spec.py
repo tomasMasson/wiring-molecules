@@ -80,7 +80,7 @@ def compute_tpr_fpr(df):
             .assign(tpr=df.tp.cumsum() / df.tp.sum(),
                     fpr=df.fp.cumsum() / df.fp.sum(),
                     tpr_fpr=(df.tp.cumsum() / df.tp.sum() - df.fp.cumsum() / df.fp.sum()),
-                    fdr=((df.fp.cumsum() / df.fp.sum()) / (df.tp.cumsum() / df.tp.sum()))
+                    fdr=(df.fp.cumsum() / (df.tp.sum() + df.fp.sum()))
                     )
             )
 
@@ -91,7 +91,7 @@ def save_significant_proteins(df, sample, control):
     """
 
     (df
-     [df.signal_ratio > df.loc[df.tpr_fpr.idxmax(), "signal_ratio"]]
+     [df.fdr < 0.05]
      .to_csv(f"{sample}_{control}.csv", index=False)
      )
 
@@ -158,7 +158,7 @@ def plot_ratiometric_analysis(df, sample, control):
     hv.save(p, f'{sample}_{control}.png')
 
 
-def run_analysis(data, mappings, localizations, sample, control):
+def run_analysis(data, mappings, annotations, label):
     """
     Ratiometric analysis and plot data
     """
@@ -168,7 +168,9 @@ def run_analysis(data, mappings, localizations, sample, control):
     mappings = pd.read_csv(mappings,
                            sep="\t",
                            names=["uniprot", "flybase"])
-    localizations = pd.read_csv(localizations)
+    localizations = pd.read_csv(annotations)
+    sample = "_".join(label.split("_")[0:2])
+    control = "_".join(label.split("_")[2:])
 
     # Perform ratiometric analysis
     return (data
@@ -185,19 +187,16 @@ def run_analysis(data, mappings, localizations, sample, control):
               help="TMT quantification data")
 @click.option("-m", "--mappings",
               help="Identifiers mapping")
-@click.option("-l", "--localizations",
+@click.option("-a", "--annotations",
               help="Reference list with True Positives (TP) and False Positives (FP) for protein localizations")
-@click.option("-s", "--sample",
-              help='Sample to run the analysis ["t4_1", "t4_2", "t5_1", "t5_2"]')
-@click.option("-c", "--control",
-              help='Control samples to normalize the analysis ["hrp_1", "h2o2_1", "hrp_2", "h2o2_2"]')
-# CLI main function
-def cli(data, mappings, localizations, sample, control):
+@click.option("-l", "--label",
+              help="Label containing the sample and control names to be used in the analysis")
+def cli(data, mappings, annotations, label):
     """
     Command line interface
     """
 
-    run_analysis(data, mappings, localizations, sample, control)
+    run_analysis(data, mappings, annotations, label)
 
 
 if __name__ == '__main__':
