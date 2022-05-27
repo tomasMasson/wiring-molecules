@@ -3,7 +3,7 @@ FORMATS = ["csv", "png"]
 
 rule all:
     input: 
-        expand("../resources/{sample}.{ext}",
+        expand("{sample}.{ext}",
                sample=SAMPLES, ext=FORMATS)
 
 rule run_analysis:
