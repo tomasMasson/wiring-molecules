@@ -91,7 +91,7 @@ def save_significant_proteins(df, sample, control):
     """
 
     (df
-     [df.fdr < 0.05]
+     [df.fdr < 0.1]
      .to_csv(f"{sample}_{control}.csv", index=False)
      )
 

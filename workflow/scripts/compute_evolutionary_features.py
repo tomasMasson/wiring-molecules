@@ -5,6 +5,18 @@ import pandas as pd
 from collections import Counter
 
 
+def normalize(series):
+    """
+    Min-Max normalization
+    """
+
+    max_value = series.max()
+    min_value = series.min()
+    norm_series = (series - min_value) / (max_value - min_value)
+
+    return norm_series
+
+
 def compute_size(row):
     """
     Returns the size of a protein list stored on a DataFrame column
@@ -56,9 +68,11 @@ def cli(input):
     # Load data
     df = pd.read_csv(input, sep="\t")
     # Calculate evolutionary features
-    print(df.apply(compute_size, axis=1))
-    print(df.apply(compute_retention, axis=1))
-    print(df.apply(compute_duplicability, axis=1))
+    df["Orthogroup_size"] = normalize(df.apply(compute_size, axis=1))
+    df["Retention"] = normalize(df.apply(compute_retention, axis=1))
+    df["Duplicability"] = normalize(df.apply(compute_duplicability, axis=1))
+
+    df.to_csv("evolutionary_features.csv", index=False)
 
 
 if __name__ == "__main__":

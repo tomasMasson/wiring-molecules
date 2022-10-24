@@ -43,12 +43,14 @@ def process_similarity_scores(matrix, output):
     df_n = df_n.subtract(df_n.mean(axis=0), axis=1).divide(df_n.std(axis=0), axis=1)
     # Save matrix to output file
     df_n = df_n.drop('DROME', axis=1)
-    array = df_n.to_numpy()
-    print("Computing correlations")
-    matrix = np.corrcoef(array)
-    # matrix = df.T.corr(method='pearson')
-    p = sns.heatmap(matrix, annot=True)
-    p.savefig("tmp.png")
+    df_n = df_n.transpose()
+    df_n.to_csv(output)
+    # print("Plotting correlations")
+    # corr = df_n.corr(method='pearson')
+    # corr.to_csv(output)
+    # p = sns.clustermap(df_n)
+    # fig = p.get_figure()
+    # p.savefig("tmp.png")
 
 
 @click.command()
