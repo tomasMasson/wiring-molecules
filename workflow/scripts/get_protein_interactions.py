@@ -40,7 +40,7 @@ def get_protein_interactions(proteins, mappings, gene_names, interactome, output
     df["protein2"] = df["protein2"].str.split(".", expand=True)[1]
 
     # Filter interaction that involve only proteins present on the initial list
-    ints = df[(df["protein1"].isin(gene2prot["Protein"])) & (df["protein2"].isin(gene2prot["Protein"]))]
+    ints = df[(df["protein1"].isin(gene2prot["Protein"])) | (df["protein2"].isin(gene2prot["Protein"]))]
     # Filter high-confidence interactions (StringDB score >= 700)
     ints = ints[ints.combined_score >= 700]
 

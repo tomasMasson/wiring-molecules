@@ -12,8 +12,8 @@ def plot_venn_diagram(data1, data2):
     Generate a two-way Venn diagram from T4 and T5 consensus protein lists
     """
 
-    t4 = set(pd.read_csv(data1).Protein)
-    t5 = set(pd.read_csv(data2).Protein)
+    t4 = set(pd.read_csv(data1, names=["Protein", "Signal"]).Protein)
+    t5 = set(pd.read_csv(data2, names=["Protein", "Signal"]).Protein)
     venn2([t4, t5], ("T4", "T5"), set_colors=("#f1a340", "#998ec3"), alpha=1)
     plt.tight_layout()
     plt.savefig("venn_diagram.png")

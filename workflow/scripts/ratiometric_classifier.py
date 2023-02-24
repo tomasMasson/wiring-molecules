@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Process TMT mass spectrometry abundance values
-and plot ROC curves for the samples.
+Process protein intensity channels from TMT labelinga experiment
+and perform a ratiometric analysis of samples
 """
 
 import click
@@ -52,16 +52,16 @@ def get_subcellular_localization_references(go_terms, flyxcdb):
             )
 
 
-def map_identifiers(data, mappings):
+def map_identifiers(data, mapping):
 
     # Initialize a dict to store mappings
     map_dic = {}
     # Scan all the protein ids on the table
-    for recs in data.Protein_id.iteritems():
+    for recs in data.Protein_id.items():
         for rec in recs[1].split(";"):
             rec = rec.split("-")[0]
             # Map to FlyBase
-            mp = mappings[mappings.uniprot == rec].flybase
+            mp = mapping[mapping.uniprot == rec].flybase
             # Save positive results to the dict
             if len(mp) > 0:
                 map_dic[recs[0]] = list(mp)[0]
@@ -101,6 +101,7 @@ def compute_tpr_fpr(df):
     Calculates true positives and false positives for the sample and control
     """
 
+    # Compute rates for TP, FP and False Discovery Rate  (FDR)
     return (df
             .assign(tpr=df.tp.cumsum() / df.tp.sum(),
                     fpr=df.fp.cumsum() / df.fp.sum(),
@@ -112,16 +113,17 @@ def compute_tpr_fpr(df):
 
 def save_significant_proteins(df, sample, control):
     """
-    Write the proteins that are above the maximum TPR-FPR threshold
+    Write the proteins that are below a 10% FDR threshold
     """
 
     (df
-     [df.fdr < 0.1]
+     [df.fdr < 0.10]
+     # [df.signal_ratio > df.loc[df.tpr_fpr.idxmax(), "signal_ratio"]]
      .drop_duplicates(subset=["Protein_id"])
-     .loc[:, ["Protein_id"]]
+     .loc[:, ["Protein_id", "signal_ratio"]]
      .assign(Sample=f"{sample}")
      .assign(Control=f"{control}")
-     .to_csv(f"{sample}_{control}.csv", index=False)
+     .to_csv(f"{sample}_{control}.csv", index=False, header=False)
      )
 
     return df
@@ -130,14 +132,14 @@ def save_significant_proteins(df, sample, control):
 def plot_ratiometric_analysis(df, sample, control):
 
     """
-    Save diagnostic plot for the ratiometric analysis
+    Save ROC curve, signal ratio histograms for TP/FP and TPR-FPR distributions from the ratiometric classifier
     """
 
     # Set color palette
     TP_COLOR = "#f1a340"
     FP_COLOR = "#998ec3"
     # Compute pvalue and AUC score
-    pvalue = str(np.round(ranksums(df.tpr, df.fpr, alternative="greater")[1], 2))
+    pvalue = np.format_float_scientific(ranksums(df.tpr, df.fpr, alternative="greater")[1], precision=1)
     auc = str(np.round(np.trapz(df.tpr, df.fpr), 4))
     # Define curve for random classifier
     line = pd.DataFrame({"x": np.linspace(df.fpr.min(), df.fpr.max(), 10),
@@ -155,9 +157,11 @@ def plot_ratiometric_analysis(df, sample, control):
                  linestyle="--",
                  color=FP_COLOR,
                  ax=ax1)
+    # Set axes names
     ax1.set_xlabel("False Positive Rate (FPR)")
     ax1.set_ylabel("True Postive Rate (TPR)")
-    ax1.text(0.04, 0.94, f"AUC={auc}")
+    ax1.text(0.02, 0.94, f"AUC={auc}")
+    ax1.text(0.02, 0.84, f"p-value={pvalue}")
     # Plot TP and FP distributions
     tp =df[df.tp == 1].signal_ratio
     fp =df[df.fp == 1].signal_ratio
@@ -171,6 +175,7 @@ def plot_ratiometric_analysis(df, sample, control):
                  binwidth=0.1,
                  stat="probability",
                  ax=ax2)
+    # Set axes names
     ax2.set_xlabel("Signal Intensity Ratio")
     ax2.set_xlim(-1.5, 1.5)
     ax2.set_ylim(0, 0.34)
@@ -184,12 +189,13 @@ def plot_ratiometric_analysis(df, sample, control):
     ax3.set_ylim(-0.1, 0.6)
     # Fix legend overlap
     plt.tight_layout(h_pad=2)
+    # Save figure
     fig.savefig(f"{sample}_{control}.png")
 
 
 def run_analysis(data, mappings, annotations, flyxcdb, label):
     """
-    Ratiometric analysis and plot data
+    Run and plot the ratiometric classifier
     """
 
     # Load the data, mappings and localization datasets
@@ -220,7 +226,7 @@ def run_analysis(data, mappings, annotations, flyxcdb, label):
 @click.option("-f", "--flyxcdb",
               help="Drosophila melanogaster FlyXCDB is used to expand the set of True Positives (TP) protein list based on subcellular localization")
 @click.option("-l", "--label",
-              help="Label containing the sample and control names to be used in the analysis")
+              help="Label containing the sample and control names to be used in the analysis (should be spaced by an underscore(e.g. t4_1_hrp_1")
 def cli(data, mappings, go_terms, flyxcdb, label):
     """
     Command line interface

@@ -14,14 +14,17 @@ SAMPLES = ["t4_1_hrp_1",
            "t5_1_h2o2_2",
            "t5_2_h2o2_1",
            "t5_2_h2o2_2"]
-FORMATS = ["csv", "png"]
+
+# FORMATS = ["csv", "png"]
+
 
 rule all:
     input: 
-        "t4_consensus_surfaceome.csv", 
-        "t5_consensus_surfaceome.csv",
-        "pca_analysis.png",
-        "venn_diagram.png"
+        "../results/pl_proteomics/pl_results/t4_consensus_surfaceome.csv", 
+        "../results/pl_proteomics/pl_results/t5_consensus_surfaceome.csv",
+        "../results/pl_proteomics/pl_results/pca_analysis.png",
+        "../results/pl_proteomics/pl_results/venn_diagram.png"
+
 
 rule run_analysis:
     input:
@@ -34,7 +37,10 @@ rule run_analysis:
     output:
         "{sample}.{ext}"
     shell:
-        "scripts/ratiometric_classifier.py --data {input.dataset} --mappings {input.mappings} --go_terms {input.go_terms} --flyxcdb {input.flyxcdb} --label {params.sample}"
+        """
+        scripts/ratiometric_classifier.py --data {input.dataset} --mappings {input.mappings} --go_terms {input.go_terms} --flyxcdb {input.flyxcdb} --label {params.sample}
+        """
+
 
 rule merge_outputs:
     input:
@@ -47,16 +53,18 @@ rule merge_outputs:
         rm t4_*.csv t5_*.csv
         """
 
+
 rule get_consensus_surfaceomes:
     input:
         "t4vt5_signficant_proteins.csv"
     output:
         "t4_consensus_surfaceome.csv", 
-        "t5_consensus_surfaceome.csv"
+        "t5_consensus_surfaceome.csv",
     shell:
         """
         scripts/get_consensus_surfaceomes.py --input {input}
         """
+
 
 rule plot_pca_analysis:
     input:
@@ -64,13 +72,37 @@ rule plot_pca_analysis:
     output:
         "pca_analysis.png"
     shell:
-        "scripts/plot_pca.py --data {input}"
+        """
+        scripts/plot_pca.py --data {input}
+        """
+
 
 rule plot_venn_diagram:
     input:
-        "t4_consensus_surfaceome.csv",
-        "t5_consensus_surfaceome.csv"
+        "t4_consensus_surfaceome.csv", 
+        "t5_consensus_surfaceome.csv",
     output:
         "venn_diagram.png"
     shell:
-        "scripts/plot_venn_diagram.py --data1 {input[0]} --data2 {input[1]}"
+        """
+        scripts/plot_venn_diagram.py --data1 {input[0]} --data2 {input[1]}
+        """
+
+
+rule move_outputs:
+    input:
+        "t4_consensus_surfaceome.csv", 
+        "t5_consensus_surfaceome.csv",
+        "pca_analysis.png",
+        "venn_diagram.png"
+    params:
+        "../results/pl_proteomics/pl_results/"
+    output:
+        "../results/pl_proteomics/pl_results/t4_consensus_surfaceome.csv", 
+        "../results/pl_proteomics/pl_results/t5_consensus_surfaceome.csv",
+        "../results/pl_proteomics/pl_results/pca_analysis.png",
+        "../results/pl_proteomics/pl_results/venn_diagram.png"
+    shell:
+        """
+        mv {input} {params}
+        """

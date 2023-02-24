@@ -12,22 +12,18 @@ SAMPLES = ["GSM4451487_24h_APF_1",
 
 rule all:
     input: 
-        expand("{sample}.png", sample=SAMPLES),
-        expand("{sample}_no_expr_t4.csv", sample=SAMPLES),
-        expand("{sample}_no_expr_t5.csv", sample=SAMPLES),
+        expand("{sample}_protein_expression.csv", sample=SAMPLES)
 
 rule run_analysis:
     input:
-        folder="t4t5_scrnaseq_data/",
-        t4_proteome="workflow/t4_consensus_surfaceome.csv",
-        t5_proteome="workflow/t5_consensus_surfaceome.csv",
+        folder="../resources/t4t5_scrnaseq_data/",
+        t4_proteome="../results/pl_proteomics/pl_results/t4_consensus_surfaceome.csv",
+        t5_proteome="../results/pl_proteomics/pl_results/t5_consensus_surfaceome.csv"
     params:
         sample="{sample}",
     output:
-        "{sample}.png",
-        "{sample}_no_expr_t4.csv",
-        "{sample}_no_expr_t5.csv"
+        "{sample}_protein_expression.csv"
     shell:
         """
-        ./process_scrnaseq.py --folder {input.folder} --sample {params} --t4_proteome {input.t4_proteome} --t5_proteome {input.t5_proteome}
+        ./scripts/process_scrnaseq.py --folder {input.folder} --sample {params} --t4_proteome {input.t4_proteome} --t5_proteome {input.t5_proteome}
         """
