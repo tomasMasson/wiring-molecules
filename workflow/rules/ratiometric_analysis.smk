@@ -20,10 +20,9 @@ SAMPLES = ["t4_1_hrp_1",
 
 rule all:
     input: 
-        "../results/pl_proteomics/pl_results/t4_consensus_surfaceome.csv", 
-        "../results/pl_proteomics/pl_results/t5_consensus_surfaceome.csv",
-        "../results/pl_proteomics/pl_results/pca_analysis.png",
-        "../results/pl_proteomics/pl_results/venn_diagram.png"
+        "../results/pl_proteomics/pl_results/t4t5_consensus_surfaceome.csv",
+        "../results/pl_proteomics/pl_results/pca_analysis.svg",
+        "../results/pl_proteomics/pl_results/venn_diagram.svg"
 
 
 rule run_analysis:
@@ -46,7 +45,7 @@ rule merge_outputs:
     input:
         expand("{sample}.csv", sample=SAMPLES)
     output:
-        temp("t4vt5_signficant_proteins.csv")
+        temp("t4t5_signficant_proteins.csv")
     shell:
         """
         cat {input} > {output} && \
@@ -56,10 +55,9 @@ rule merge_outputs:
 
 rule get_consensus_surfaceomes:
     input:
-        "t4vt5_signficant_proteins.csv"
+        "t4t5_signficant_proteins.csv"
     output:
-        "t4_consensus_surfaceome.csv", 
-        "t5_consensus_surfaceome.csv",
+        "t4t5_consensus_surfaceome.csv"
     shell:
         """
         scripts/get_consensus_surfaceomes.py --input {input}
@@ -70,7 +68,7 @@ rule plot_pca_analysis:
     input:
         "../resources/t4vt5_pl_dataset.csv"
     output:
-        "pca_analysis.png"
+        "pca_analysis.svg"
     shell:
         """
         scripts/plot_pca.py --data {input}
@@ -79,29 +77,26 @@ rule plot_pca_analysis:
 
 rule plot_venn_diagram:
     input:
-        "t4_consensus_surfaceome.csv", 
-        "t5_consensus_surfaceome.csv",
+        "t4t5_consensus_surfaceome.csv"
     output:
-        "venn_diagram.png"
+        "venn_diagram.svg"
     shell:
         """
-        scripts/plot_venn_diagram.py --data1 {input[0]} --data2 {input[1]}
+        scripts/plot_venn_diagram.py --data {input}
         """
 
 
 rule move_outputs:
     input:
-        "t4_consensus_surfaceome.csv", 
-        "t5_consensus_surfaceome.csv",
-        "pca_analysis.png",
-        "venn_diagram.png"
+        "t4t5_consensus_surfaceome.csv", 
+        "pca_analysis.svg",
+        "venn_diagram.svg"
     params:
         "../results/pl_proteomics/pl_results/"
     output:
-        "../results/pl_proteomics/pl_results/t4_consensus_surfaceome.csv", 
-        "../results/pl_proteomics/pl_results/t5_consensus_surfaceome.csv",
-        "../results/pl_proteomics/pl_results/pca_analysis.png",
-        "../results/pl_proteomics/pl_results/venn_diagram.png"
+        "../results/pl_proteomics/pl_results/t4t5_consensus_surfaceome.csv", 
+        "../results/pl_proteomics/pl_results/pca_analysis.svg",
+        "../results/pl_proteomics/pl_results/venn_diagram.svg"
     shell:
         """
         mv {input} {params}

@@ -37,7 +37,7 @@ def plot_pca(data):
     ax1.set_xlabel(f"PC1 ({v1}%)")
     ax1.set_ylabel(f"PC2 ({v2}%)")
     plt.tight_layout()
-    plt.savefig("pca_analysis.png")
+    plt.savefig("pca_analysis.svg")
 
 
 # Command line interface options

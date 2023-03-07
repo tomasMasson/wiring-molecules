@@ -46,19 +46,21 @@ def get_consensus_surfaceomes(data):
     t5_prot = set(protein_lists["t5_1"]).intersection(protein_lists["t5_2"])
     # # Save final tables to output files (one for each type, T4 and T5)
 
-    df = pd.DataFrame(data=[t4_prot, t4_prot]).T
-    df.columns = ["Proteins", "Signal"]
-    df.Signal.replace(t4_dic, inplace=True)
-    df.set_index("Proteins", inplace=True)
-    df = df.sort_values(by=["Signal"], ascending=False)
-    df.to_csv("t4_consensus_surfaceome.csv")
+    t4 = pd.DataFrame(data=[t4_prot, t4_prot]).T
+    t4.columns = ["Protein", "T4_signal"]
+    t4.T4_signal.replace(t4_dic, inplace=True)
+    # t4.set_index("Proteins", inplace=True)
+    t4 = t4.sort_values(by=["T4_signal"], ascending=False)
+    # t4.to_csv("t4_consensus_surfaceome.csv")
 
-    df = pd.DataFrame(data=[t5_prot, t5_prot]).T
-    df.columns = ["Proteins", "Signal"]
-    df.Signal.replace(t5_dic, inplace=True)
-    df.set_index("Proteins", inplace=True)
-    df = df.sort_values(by=["Signal"], ascending=False)
-    df.to_csv("t5_consensus_surfaceome.csv")
+    t5 = pd.DataFrame(data=[t5_prot, t5_prot]).T
+    t5.columns = ["Protein", "T5_signal"]
+    t5.T5_signal.replace(t5_dic, inplace=True)
+    # t5.set_index("Proteins", inplace=True)
+    t5 = t5.sort_values(by=["T5_signal"], ascending=False)
+    # t5.to_csv("t5_consensus_surfaceome.csv")
+    df = t4.merge(t5, how="outer").fillna(0)
+    df.to_csv("t4t5_consensus_surfaceome.csv", index=False)
 
     # (pd.Series(list(t4_prot), name="Protein")
     #  .to_csv("t4_consensus_surfaceome.csv", index=False)

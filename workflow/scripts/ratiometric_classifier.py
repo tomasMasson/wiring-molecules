@@ -41,7 +41,8 @@ def get_subcellular_localization_references(go_terms, flyxcdb):
                        "annotation": ["TP"] * len(tp)})
     fp = pd.DataFrame({"protein": list(fp),
                        "annotation": ["FP"] * len(fp)})
-    go_terms = tp.append(fp)
+    # go_terms = tp.append(fp)
+    go_terms = pd.concat([tp, fp])
 
     return (go_terms
             [go_terms["annotation"] == "TP"]
@@ -117,8 +118,8 @@ def save_significant_proteins(df, sample, control):
     """
 
     (df
-     [df.fdr < 0.10]
-     # [df.signal_ratio > df.loc[df.tpr_fpr.idxmax(), "signal_ratio"]]
+     # [df.fdr < 0.10]
+     [df.signal_ratio > df.loc[df.tpr_fpr.idxmax(), "signal_ratio"]]
      .drop_duplicates(subset=["Protein_id"])
      .loc[:, ["Protein_id", "signal_ratio"]]
      .assign(Sample=f"{sample}")
@@ -137,7 +138,7 @@ def plot_ratiometric_analysis(df, sample, control):
 
     # Set color palette
     TP_COLOR = "#f1a340"
-    FP_COLOR = "#998ec3"
+    FP_COLOR = "#808080"
     # Compute pvalue and AUC score
     pvalue = np.format_float_scientific(ranksums(df.tpr, df.fpr, alternative="greater")[1], precision=1)
     auc = str(np.round(np.trapz(df.tpr, df.fpr), 4))
@@ -171,7 +172,7 @@ def plot_ratiometric_analysis(df, sample, control):
                  stat="probability",
                  ax=ax2)
     sns.histplot(fp, bins=20,
-                 color="#998ec3",
+                 color="#808080",
                  binwidth=0.1,
                  stat="probability",
                  ax=ax2)
@@ -190,7 +191,7 @@ def plot_ratiometric_analysis(df, sample, control):
     # Fix legend overlap
     plt.tight_layout(h_pad=2)
     # Save figure
-    fig.savefig(f"{sample}_{control}.png")
+    fig.savefig(f"{sample}_{control}.svg")
 
 
 def run_analysis(data, mappings, annotations, flyxcdb, label):
