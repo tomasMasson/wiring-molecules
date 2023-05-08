@@ -1,0 +1,7 @@
+DATA:
+    proteome: UP000000803_7227.fasta.gz
+    proteome_url: https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/reference_proteomes/Eukaryota/UP000000803/UP000000803_7227.fasta.gz
+PARAMS:
+    chunk: 1000
+    size: 14000
+
