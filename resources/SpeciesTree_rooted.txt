@@ -1,0 +1,1 @@
+((drosophila_melanogaster_filt:0.0246976,(drosophila_sechellia_filt:0.0138564,drosophila_simulans_filt:0.0101136)0.756762:0.0195053)0.989375:0.135132,((drosophila_pseudoobscura_filt:0.0132427,drosophila_persimilis_filt:0.012962)0.95346:0.0709618,drosophila_subobscura_filt:0.0838672)0.989375:0.135132);
