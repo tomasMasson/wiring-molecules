@@ -24,7 +24,6 @@ def get_url_links(url: str) -> list:
 
 def download_compressed_file(url: str, outfile: str) -> None:
     with requests.get(url, stream=True) as r:
-        # with gzip.GzipFile(fileobj=r) as uncompressed:
         with open(outfile, "wb") as fh:
             for chunk in r.iter_content(chunk_size=8192):
                 fh.write(chunk)
@@ -35,12 +34,9 @@ def tau_index(v: pd.Series) -> pd.Series:
     return (np.sum(1 - v/np.max(v)) / (len(v) - 1))
 
 
-def calculate_tau(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Compute Tau index for the columns matrix/DataFrame
-    """
-
-    return df.apply(tau_index, axis=1)
+def calculate_tau(df: pd.DataFrame) -> pd.Series:
+    "Compute Tau index for the columns matrix/DataFrame"
+    return pd.Series(df.apply(tau_index, axis=1))
 
 
 ### FlyAtlas2 and scRNAseq expression specificity analysis

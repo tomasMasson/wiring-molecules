@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Process protein intensity channels from TMT labelinga experiment
+Process protein intensity channels from TMT labeling experiment
 and perform a ratiometric analysis of samples
 """
 
