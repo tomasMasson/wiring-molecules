@@ -36,7 +36,7 @@ def save_cds_sequences(sequences, organism):
     # Get longest isoforms
     fseqs = get_longest_isoform(sequences)
     # Set output name
-    output = organism + "_filt.fna"
+    output = organism + ".fasta"
     # Save filtered sequences into output
     with open(output, "w") as fh:
         for key in fseqs:
@@ -49,7 +49,7 @@ def save_protein_sequences(sequences, organism):
     # Get longest isoforms
     fseqs = get_longest_isoform(sequences)
     # Set output name
-    output = organism + "_filt.faa"
+    output = organism + ".fasta"
     # Save filtered sequences into output
     with open(output, "w") as fh:
         for key in fseqs:

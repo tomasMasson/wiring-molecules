@@ -1,6 +1,6 @@
-drosophila_melanogaster,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_melanogaster/latest_assembly_versions/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_cds_from_genomic.fna.gz
-drosophila_simulans,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_simulans/latest_assembly_versions/GCF_016746395.2_Prin_Dsim_3.1/GCF_016746395.2_Prin_Dsim_3.1_cds_from_genomic.fna.gz
-drosophila_sechellia,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_sechellia/latest_assembly_versions/GCF_004382195.2_ASM438219v2/GCF_004382195.2_ASM438219v2_cds_from_genomic.fna.gz
-drosophila_pseudoobscura,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_pseudoobscura/latest_assembly_versions/GCF_009870125.1_UCI_Dpse_MV25/GCF_009870125.1_UCI_Dpse_MV25_cds_from_genomic.fna.gz
-drosophila_persimilis,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_persimilis/latest_assembly_versions/GCF_003286085.1_DperRS2/GCF_003286085.1_DperRS2_cds_from_genomic.fna.gz
-drosophila_subobscura,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_subobscura/latest_assembly_versions/GCF_008121235.1_UCBerk_Dsub_1.0/GCF_008121235.1_UCBerk_Dsub_1.0_cds_from_genomic.fna.gz
+drosophila_melanogaster,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_melanogaster/latest_assembly_versions/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_protein.faa.gz
+drosophila_simulans,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_simulans/latest_assembly_versions/GCF_016746395.2_Prin_Dsim_3.1/GCF_016746395.2_Prin_Dsim_3.1_protein.faa.gz
+drosophila_sechellia,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_sechellia/latest_assembly_versions/GCF_004382195.2_ASM438219v2/GCF_004382195.2_ASM438219v2_protein.faa.gz
+drosophila_pseudoobscura,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_pseudoobscura/latest_assembly_versions/GCF_009870125.1_UCI_Dpse_MV25/GCF_009870125.1_UCI_Dpse_MV25_protein.faa.gz
+drosophila_persimilis,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_persimilis/latest_assembly_versions/GCF_003286085.1_DperRS2/GCF_003286085.1_DperRS2_protein.faa.gz
+drosophila_subobscura,https://ftp.ncbi.nih.gov/genomes/refseq/invertebrate/Drosophila_subobscura/latest_assembly_versions/GCF_008121235.1_UCBerk_Dsub_1.0/GCF_008121235.1_UCBerk_Dsub_1.0_protein.faa.gz
