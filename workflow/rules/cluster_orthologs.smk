@@ -5,7 +5,8 @@ SPECIES = pd.read_csv("../resources/drosophila_urls.csv", names=["organism", "ur
 
 rule:
     input:
-        "../results/orthofinder/Orthogroups.tsv"
+        "../results/evolutionary_rates/Orthogroups.tsv",
+        "../results/evolutionary_rates/SpeciesTree.tsv",
 
 
 rule download_proteome_data:
@@ -36,10 +37,13 @@ rule run_orthofinder:
     input: "proteome"
     params: outdir="of",
             name="of"
-    output: "../results/orthofinder/Orthogroups.tsv"
+    output:
+        "../results/evolutionary_rates/Orthogroups.tsv",
+        "../results/evolutionary_rates/SpeciesTree.tsv",
     shell:
         """
         orthofinder -f {input} -o {params.outdir} -n {params.name} && \
-        cp {params.outdir}/Results_{params.name}/Orthogroups/Orthogroups.tsv {output}
-        rm {params.outdir} -rf
+        cp {params.outdir}/Results_{params.name}/Orthogroups/Orthogroups.tsv {output[0]} && \
+        cp {params.outdir}/Results_{params.name}/Species_Tree/SpeciesTree_rooted.txt {output} && \
+        rm {input} {params.outdir} -rf 
         """
