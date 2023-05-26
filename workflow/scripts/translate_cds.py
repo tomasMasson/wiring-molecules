@@ -7,13 +7,27 @@ from Bio.SeqRecord import SeqRecord
 import click
 
 
-def translate_cds(seqs, output):
-    "Converts a fasta nucleotide sequence into its corresponding protein translation"
-    
+def translate_cds(seq: SeqIO.SeqRecord) -> SeqIO.SeqRecord:
+    "Returns a CDS translation in the standard or invertebrate mitochondrial codes"
+    # Get protein sequence (NCBI translation table=1)
+    t = seq.seq.translate(to_stop=True)
+    # Check that CDS and protein lengths matches
+    if len(t) == len(seq.seq)/3 - 1:
+        return SeqRecord(t, seq.id, seq.name, seq.description)
+    # Treat the CDS as mitochondrial (table=5)
+    else:
+        t = seq.seq.translate(to_stop=True, table=5)
+        return SeqRecord(t, seq.id, seq.name, seq.description)
+
+
+def translate_multifasta(seqs: SeqIO.SeqRecord, output: str) -> None:
+    "Converts a CDS multifasta into its protein version"
     # Load coding sequences
-    seqs = SeqIO.parse(seqs, 'fasta')
+    sequences = SeqIO.parse(seqs, 'fasta')
     # Translate CDS and store them into a list
-    prots = [SeqRecord(seq.seq.translate(to_stop=True), seq.id, seq.name, seq.description) for seq in seqs]
+    prots = [translate_cds(seq)
+             for seq in sequences
+             if len(seq.seq) % 3 == 0]
     # Save to file if a name is provided
     if output is not None:
         SeqIO.write(prots, output, 'fasta')
@@ -22,6 +36,7 @@ def translate_cds(seqs, output):
         for prot in prots:
             # Fasta format style
             print(f'>{prot.description}\n{prot.seq}')
+    return None
 
 # Command line interface (CLI) options
 SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -31,11 +46,11 @@ SETTINGS = dict(help_option_names=['-h', '--help'])
               help='Coding sequences to translate')
 @click.option('-o',
               '--output',
-              help='Output file name. If nothing is provided, output is sent to STDOUT')
+              help='Output file name. If not provided, output is sent to STDOUT')
  
 # CLI function
 def cli(seqs, output):
-    translate_cds(seqs, output)
+    translate_multifasta(seqs, output)
 
 if __name__ == '__main__':
     cli()
