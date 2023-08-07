@@ -8,6 +8,7 @@ rule all:
         "../results/surfaceome_analysis/dmel_extracellular_domains.csv",
         "../results/surfaceome_analysis/dmel_adhesion_proteome.csv"
 
+# Start auxiliar functions
 
 def extract_protein_subset(protein_list: list, proteome: str, outfile: str) -> str:
     "Returns a protein subset from a multifasta"
@@ -28,12 +29,14 @@ def extract_protein_subset(protein_list: list, proteome: str, outfile: str) -> s
                     idlist.append(header)
     return outfile
 
+# End auxiliar functions
+
 
 rule download_uniprot_data:
     params:
-        proteome="http://ftp.flybase.net/releases/current/dmel_r6.51/fasta/dmel-all-translation-r6.51.fasta.gz",
-        gene_ontology="http://ftp.flybase.net/releases/current/precomputed_files/go/gene_association.fb.gz",
-        uniprot_mappings="http://ftp.flybase.net/releases/current/precomputed_files/genes/fbgn_NAseq_Uniprot_fb_2023_02.tsv.gz"
+        proteome="http://ftp.flybase.net/releases/FB2023_04/dmel_r6.53/fasta/dmel-all-translation-r6.53.fasta.gz",
+        gene_ontology="http://ftp.flybase.net/releases/FB2023_04/precomputed_files/go/gene_association.fb.gz",
+        uniprot_mappings="http://ftp.flybase.net/releases/FB2023_04/precomputed_files/genes/fbgn_NAseq_Uniprot_fb_2023_04.tsv.gz"
     output:
         temp("dmel_proteome.fasta"),
         temp("gene_association.fb"),
@@ -95,6 +98,7 @@ rule extract_extracellular_proteins:
         ex_proteome += list(df[df.GO == "GO:0005911"].FBgn)
         # Extracellular region GO
         ex_proteome += list(df[df.GO == "GO:0005576"].FBgn)
+        # Deeploc2 prediction
         deeploc = pd.read_csv(input.deeploc, names=["Protein_ID", "Localizations"])
         ex_proteome += list(deeploc.Protein_ID)
         extract_protein_subset(ex_proteome, input.proteome, output[0])
@@ -119,7 +123,7 @@ rule extract_adhesion_proteome:
     output:
         "dmel_adhesion_proteome.csv"
     shell:
-        "grep -e Immunoglobulin -e Leucine -e fn3 {input} | awk '{{print $4}}' | sort | uniq > {output}"
+        "grep -e Immunoglobulin -e Leucine -e fn3 -e EGF {input} | awk '{{print $4}}' | sort | uniq > {output}"
 
 
 rule move_files_to_results:
