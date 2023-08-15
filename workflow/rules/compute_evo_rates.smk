@@ -15,7 +15,7 @@ def filter_scorthogroups(data: str, outfile=None) -> pd.Series:
     # Save scOrthogroups
     dff = df[~df.Orthogroup.isin(exclude)]
     if outfile:
-        dff.to_csv(outfile, index=False)
+        dff.to_csv(outfile, index=False, sep="\t")
     return dff.Orthogroup
 
 
@@ -25,7 +25,7 @@ ORTHOGROUPS = filter_scorthogroups("../results/evo_rates/Orthogroups.tsv")
 
 rule all:
     input:
-        expand("../results/evo_rates/{og}.aln.fna.FUBAR.json", og=ORTHOGROUPS),
+        # expand("../results/evo_rates/{og}.aln.fna.FUBAR.json", og=ORTHOGROUPS),
         expand("../results/evo_rates/{og}.aln.fna.ABSREL.json", og=ORTHOGROUPS)
 
 
@@ -65,14 +65,14 @@ rule codon_alignment:
       """
 
 
-rule run_fubar_analysis:
-    input: "../results/evo_rates/{og}.aln.fna",
-           "../results/evo_rates/SpeciesTree.txt"
-    output: "../results/evo_rates/{og}.aln.fna.FUBAR.json"
-    shell:
-      """
-      hyphy fubar --alignment {input[0]} --tree {input[1]}
-      """
+# rule run_fubar_analysis:
+#     input: "../results/evo_rates/{og}.aln.fna",
+#            "../results/evo_rates/SpeciesTree.txt"
+#     output: "../results/evo_rates/{og}.aln.fna.FUBAR.json"
+#     shell:
+#       """
+#       hyphy fubar --alignment {input[0]} --tree {input[1]}
+#       """
 
 
 rule run_absrel_analysis:
