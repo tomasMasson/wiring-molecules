@@ -6,6 +6,7 @@ rule all:
     input: 
         "../results/surfaceome_analysis/dmel_extracellular_proteome.fasta",
         "../results/surfaceome_analysis/dmel_extracellular_domains.csv",
+        "../results/surfaceome_analysis/dmel_extracellular_architecture.csv",
         "../results/surfaceome_analysis/dmel_adhesion_proteome.csv"
 
 # Start auxiliar functions
@@ -126,18 +127,39 @@ rule extract_adhesion_proteome:
         "grep -e Immunoglobulin -e Leucine -e fn3 -e EGF {input} | awk '{{print $4}}' | sort | uniq > {output}"
 
 
+rule extract_protein_architecture:
+    input:
+        "dmel_extracellular_domains.csv"
+    output:
+        "dmel_extracellular_architecture.csv"
+    run:
+        domains = {}
+        search = SearchIO.parse(input[0], "hmmsearch3-domtab")
+        for query in search:
+            dom = []
+            for hit in query:
+                dom.append(hit.id)
+            dom = ("/".join(dom))
+            domains[query.id] = dom
+        df = pd.DataFrame.to_dict(domains, orient="index", columns=["Domains"])
+        df.to_csv(output[0])
+
+
 rule move_files_to_results:
     input:
         prot="dmel_extracellular_proteome.fasta",
         dom="dmel_extracellular_domains.csv",
+        arc="dmel_extracellular_architecture.csv",
         adh="dmel_adhesion_proteome.csv"
     output:
         prot="../results/surfaceome_analysis/dmel_extracellular_proteome.fasta",
         dom="../results/surfaceome_analysis/dmel_extracellular_domains.csv",
+        arc="../results/surfaceome_analysis/dmel_extracellular_architecture.csv",
         adh="../results/surfaceome_analysis/dmel_adhesion_proteome.csv"
     shell:
         """
         mv {input.prot} {output.prot} && \
         mv {input.dom} {output.dom} && \
+        mv {input.arc} {output.arc} && \
         mv {input.adh} {output.adh}
         """
