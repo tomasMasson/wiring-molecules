@@ -1,7 +1,18 @@
+ORTHODB_OG2GENES: https://data.orthodb.org/download/odb11v0_OG2genes.tab.gz
+ORTHODB_GENES_ANN: https://data.orthodb.org/download/odb11v0_genes.tab.gz
+ANNOTATION_DB: http://ftp.flybase.net/releases/FB2023_06/precomputed_files/genes/fbgn_NAseq_Uniprot_fb_2023_06.tsv.gz
+TAXON_ID: 7147
+REFERENCE_SPECIE: 7227
+
 DATA:
     proteome: UP000000803_7227.fasta.gz
     proteome_url: https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/reference_proteomes/Eukaryota/UP000000803/UP000000803_7227.fasta.gz
 PARAMS:
     chunk: 1000
     size: 14000
-
+taxid: 7147
+dmel_taxid: 7277_0
+orthogroups: https://data.orthodb.org/download/odb11v0_OG2genes.tab.gz
+species: https://data.orthodb.org/download/odb11v0_species.tab.gz
+gene_xrefs: https://data.orthodb.org/download/odb11v0_gene_xrefs.tab.gz
+uniprot: https://ftp.flybase.net/releases/FB2023_02/precomputed_files/genes/fbgn_NAseq_Uniprot_fb_2023_02.tsv.gz

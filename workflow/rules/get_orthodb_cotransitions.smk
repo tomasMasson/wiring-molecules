@@ -2,8 +2,6 @@ import numpy as np
 import pandas as pd
 from ete3 import NCBITaxa, Tree
 
-configfile: "config.yaml"
-
 # Start auxiliar functions
 
 
