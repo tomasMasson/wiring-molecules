@@ -8,15 +8,17 @@ from ete3 import NCBITaxa, Tree
 
 # End auxiliar functions
 
+TAXONS = config["TAXON_ID"]
+
 
 rule all:
     input:
         "../results/orthodb_cotransitions/orthodb_og2genes.tab.gz",
         "../results/orthodb_cotransitions/orthodb_gene_annotations.tab.gz",
         "../results/orthodb_cotransitions/flybase_annotations.tsv.gz",
-        "../results/orthodb_cotransitions/taxa_specific_genecounts.csv",
-        "../results/orthodb_cotransitions/taxa_specific.treefile",
-        "../results/orthodb_cotransitions/taxa_specific_cotransitions.tsv"
+        expand("../results/orthodb_cotransitions/{taxa}_specific_genecounts.csv", taxa=TAXONS),
+        expand("../results/orthodb_cotransitions/{taxa}_specific.treefile", taxa=TAXONS),
+        expand("../results/orthodb_cotransitions/{taxa}_specific_cotransitions.tsv", taxa=TAXONS)
 
 
 rule download_orthodb_orthogroups:
@@ -39,9 +41,8 @@ rule download_FlyBase_annotations:
 
 rule parse_taxon_orthogroups:
     input:  "orthodb_og2genes.tab.gz"
-    params:
-        taxa=config["TAXON_ID"]
-    output: temp("taxa_specific_orthogroups.tab")
+    params: taxa="{taxa}"
+    output: temp("{taxa}_specific_orthogroups.tab")
     shell:  "zcat {input} | grep 'at{params.taxa}' > {output}"
 
 
@@ -49,8 +50,8 @@ rule parse_reference_orthodb_mappings:
     input:  "orthodb_og2genes.tab.gz"
     params:
         reference=config["REFERENCE_SPECIE"],
-        taxa=config["TAXON_ID"]
-    output: temp("reference_og2genes_mapping.tab")
+        taxa="{taxa}"
+    output: temp("{taxa}_reference_og2genes_mapping.tab")
     shell:
         """
         zcat {input} | \
@@ -72,11 +73,11 @@ rule parse_orthodb_gene_annotations:
 
 rule get_orthodb_genecounts_matrix:
     input:
-        og="taxa_specific_orthogroups.tab",
-        reference="reference_og2genes_mapping.tab",
+        og="{taxa}_specific_orthogroups.tab",
+        reference="{taxa}_reference_og2genes_mapping.tab",
         uniprot="orthodb_reference_gene_annotations.tab",
         flybase="flybase_annotations.tsv.gz"
-    output: "taxa_specific_genecounts.csv"
+    output: "{taxa}_specific_genecounts.csv"
     run:
         # Load orthogroups data
         data = pd.read_csv(input.og,
@@ -109,16 +110,25 @@ rule get_orthodb_genecounts_matrix:
         genecounts.rename(dict(zip(ref_ann.gene, ref_ann.uniprot)), axis="index", inplace=True)
         # Rename UniProt ID -> FlyBase ID
         genecounts.rename(dict(zip(ref_flybase.uniprot, ref_flybase.fbgn)), axis="index", inplace=True)
-        
-        # Remove problematic leaf (wrongly parsed by ete)
-        genecounts.drop("180454", axis=1, inplace=True)
+        if "180454" in genecounts.columns:
+            # Remove problematic leaf (wrongly parsed by ete)
+            genecounts.drop("180454", axis=1, inplace=True)
+        if "278856" in genecounts.columns:
+            # Remove problematic leaf (wrongly parsed by ete)
+            genecounts.drop("278856", axis=1, inplace=True)
+        if "121224" in genecounts.columns:
+            # Remove problematic leaf (wrongly parsed by ete)
+            genecounts.drop("121224", axis=1, inplace=True)
+        if "441943" in genecounts.columns:
+            # Rename problematic leaf (441943 -> 2961670 N. virginianus)
+            genecounts.rename({"441943": 2961670}, axis="columns", inplace=True)
         # Save dataframe
         genecounts.to_csv(output[0])
 
 
 rule extract_ncbi_taxonomic_constraints:
-    input:  "taxa_specific_genecounts.csv"
-    output: temp("taxa_specific_ncbi_taxonomy.nwk")
+    input:  "{taxa}_specific_genecounts.csv"
+    output: temp("{taxa}_specific_ncbi_taxonomy.nwk")
     run:
         genecounts = pd.read_csv(input[0], index_col="og")
         ncbi = NCBITaxa()
@@ -128,12 +138,14 @@ rule extract_ncbi_taxonomic_constraints:
         tree = ncbi.get_topology(taxa)
         leaves = [leaf.get_leaf_names()[0]
                   for leaf in tree.get_leaves()]
+        print(len(taxa))
+        print(len(leaves))
         tree.write(outfile=output[0], format=9)
 
 
 rule generate_genecounts_fasta:
-    input:  "taxa_specific_genecounts.csv"
-    output: temp("taxa_specific_profiles.fasta")
+    input:  "{taxa}_specific_genecounts.csv"
+    output: temp("{taxa}_specific_profiles.fasta")
     run:
         data = pd.read_csv(input[0], index_col="og")
         data = data[data.sum(axis=1) > 4]
@@ -146,10 +158,10 @@ rule generate_genecounts_fasta:
 
 
 rule infer_ml_phylogeny:
-    input:  "taxa_specific_profiles.fasta",
-            "taxa_specific_ncbi_taxonomy.nwk"
-    params: "taxa_specific"
-    output: "taxa_specific.treefile"
+    input:  "{taxa}_specific_profiles.fasta",
+            "{taxa}_specific_ncbi_taxonomy.nwk"
+    params: "{taxa}_specific"
+    output: "{taxa}_specific.treefile"
     shell:
         """
         iqtree -redo -s {input[0]} -g {input[1]} -m GTR2+FO+R5 --prefix {params[0]}
@@ -157,9 +169,9 @@ rule infer_ml_phylogeny:
 
 
 rule compute_gene_cotransition:
-    input:  "taxa_specific_genecounts.csv",
-            "taxa_specific.treefile"
-    output: "taxa_specific_cotransitions.tsv"
+    input:  "{taxa}_specific_genecounts.csv",
+            "{taxa}_specific.treefile"
+    output: "{taxa}_specific_cotransitions.tsv"
     run:
         # Load treefile and extract leaves order
         tree = Tree(input[1])
@@ -173,8 +185,8 @@ rule compute_gene_cotransition:
         # Compute cotransitions (as Dembech et. al)
         transitions = data.diff(axis=1).applymap(lambda x: 1 if x>1 else -1 if x <-1 else x).values.tolist()
         # sets for fast comparison
-        t01 = [set(np.nonzero(row > 0)[0]) for row in np.array(transitions)] # 0->1 transitons
-        t10 = [set(np.nonzero(row < 0)[0]) for row in np.array(transitions)] # 1->0 transitons
+        t01 = [set(np.nonzero(row > 0)[0]) for row in np.array(transitions)] # 0->1 transitions
+        t10 = [set(np.nonzero(row < 0)[0]) for row in np.array(transitions)] # 1->0 transitions
         tt = [len(a | b) for a,b in zip(t01,t10)] #total transitions
 
         with open(output[0], "w") as fh:
@@ -195,15 +207,14 @@ rule copy_results:
         "orthodb_og2genes.tab.gz",
         "orthodb_gene_annotations.tab.gz",
         "flybase_annotations.tsv.gz",
-        "taxa_specific_genecounts.csv",
-        "taxa_specific.treefile",
-        "taxa_specific_cotransitions.tsv"
+        expand("{taxa}_specific_genecounts.csv", taxa=TAXONS),
+        expand("{taxa}_specific.treefile", taxa=TAXONS),
+        expand("{taxa}_specific_cotransitions.tsv", taxa=TAXONS)
     output:
         "../results/orthodb_cotransitions/orthodb_og2genes.tab.gz",
         "../results/orthodb_cotransitions/orthodb_gene_annotations.tab.gz",
         "../results/orthodb_cotransitions/flybase_annotations.tsv.gz",
-        "../results/orthodb_cotransitions/taxa_specific_genecounts.csv",
-        "../results/orthodb_cotransitions/taxa_specific.treefile",
-        "../results/orthodb_cotransitions/taxa_specific_cotransitions.tsv"
-    shell: "mv {input} ../results/orthodb_cotransitions/ && rm taxa_specific.*"
-
+        expand("../results/orthodb_cotransitions/{taxa}_specific_genecounts.csv", taxa=TAXONS),
+        expand("../results/orthodb_cotransitions/{taxa}_specific.treefile", taxa=TAXONS),
+        expand("../results/orthodb_cotransitions/{taxa}_specific_cotransitions.tsv", taxa=TAXONS)
+    shell: "mv {input} ../results/orthodb_cotransitions/ && rm *.gz *.iqtree *.log *.parstree"

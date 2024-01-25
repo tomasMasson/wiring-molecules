@@ -1,7 +1,11 @@
 ORTHODB_OG2GENES: https://data.orthodb.org/download/odb11v0_OG2genes.tab.gz
 ORTHODB_GENES_ANN: https://data.orthodb.org/download/odb11v0_genes.tab.gz
 ANNOTATION_DB: http://ftp.flybase.net/releases/FB2023_06/precomputed_files/genes/fbgn_NAseq_Uniprot_fb_2023_06.tsv.gz
-TAXON_ID: 7147
+TAXON_ID:
+    - 6656  # Arthropoda
+    - 50557 # Insecta
+    - 7147  # Diptera
+    - 7214  # Drosophilidae
 REFERENCE_SPECIE: 7227
 
 DATA:
