@@ -13,6 +13,29 @@ import matplotlib.pyplot as plt
 from scipy.stats import ranksums
 
 
+def map_identifiers(data, mapping):
+    "Renames UniProt identifiers into FLyBase ones"
+    # Initialize a dict to store mappings
+    map_dic = {}
+    # Scan all the protein ids on the table
+    for recs in data.Protein_id.items():
+        for rec in recs[1].split(";"):
+            rec = rec.split("-")[0]
+            # Map to FlyBase
+            mp = mapping[mapping.uniprot == rec].flybase
+            # Save positive results to the dict
+            if len(mp) > 0:
+                map_dic[recs[0]] = list(mp)[0]
+                break
+    # Output results as a DataFrame with a new "Protein_id" column
+    return (data
+            .drop("Protein_id", axis=1)
+            .rename(index=map_dic)
+            .reset_index()
+            .rename(columns={"index": "Protein_id"})
+            )
+
+
 def get_subcellular_localization_references(go_terms, flyxcdb):
     """
     Returns the true and negative localization proteins sets
@@ -41,7 +64,6 @@ def get_subcellular_localization_references(go_terms, flyxcdb):
                        "annotation": ["TP"] * len(tp)})
     fp = pd.DataFrame({"protein": list(fp),
                        "annotation": ["FP"] * len(fp)})
-    # go_terms = tp.append(fp)
     go_terms = pd.concat([tp, fp])
 
     return (go_terms
@@ -50,30 +72,6 @@ def get_subcellular_localization_references(go_terms, flyxcdb):
             go_terms
             [go_terms["annotation"] == "FP"]
             ["protein"]
-            )
-
-
-def map_identifiers(data, mapping):
-
-    # Initialize a dict to store mappings
-    map_dic = {}
-    # Scan all the protein ids on the table
-    for recs in data.Protein_id.items():
-        for rec in recs[1].split(";"):
-            rec = rec.split("-")[0]
-            # Map to FlyBase
-            mp = mapping[mapping.uniprot == rec].flybase
-            # Save positive results to the dict
-            if len(mp) > 0:
-                map_dic[recs[0]] = list(mp)[0]
-                break
-
-    # Output results as a DataFrame with a new "Protein_id" column
-    return (data
-            .drop("Protein_id", axis=1)
-            .rename(index=map_dic)
-            .reset_index()
-            .rename(columns={"index": "Protein_id"})
             )
 
 
@@ -99,7 +97,7 @@ def compute_tp_fp(data, mappings, go_terms, flybase, sample, control):
 
 def compute_tpr_fpr(df):
     """
-    Calculates true positives and false positives for the sample and control
+    Computes true positive rate, false positive rate and false discovery rate for the sample and control
     """
 
     # Compute rates for TP, FP and False Discovery Rate  (FDR)
@@ -114,11 +112,10 @@ def compute_tpr_fpr(df):
 
 def save_significant_proteins(df, sample, control):
     """
-    Write the proteins that are below a 10% FDR threshold
+    Write the proteins that are below above TPR/FPR maximum difference
     """
 
     (df
-     # [df.fdr < 0.10]
      [df.signal_ratio > df.loc[df.tpr_fpr.idxmax(), "signal_ratio"]]
      .drop_duplicates(subset=["Protein_id"])
      .loc[:, ["Protein_id", "signal_ratio"]]
@@ -137,7 +134,10 @@ def plot_ratiometric_analysis(df, sample, control):
     """
 
     # Set color palette
-    TP_COLOR = "#f1a340"
+    if sample.startswith("t4"):
+        TP_COLOR = "#f1a340"
+    elif sample.startswith("t5"):
+        TP_COLOR = "#998ec3"
     FP_COLOR = "#808080"
     # Compute pvalue and AUC score
     pvalue = np.format_float_scientific(ranksums(df.tpr, df.fpr, alternative="greater")[1], precision=1)
@@ -167,7 +167,7 @@ def plot_ratiometric_analysis(df, sample, control):
     tp =df[df.tp == 1].signal_ratio
     fp =df[df.fp == 1].signal_ratio
     sns.histplot(tp, bins=20,
-                 color="#f1a340",
+                 color=TP_COLOR,
                  binwidth=0.1,
                  stat="probability",
                  ax=ax2)
@@ -182,7 +182,7 @@ def plot_ratiometric_analysis(df, sample, control):
     ax2.set_ylim(0, 0.34)
     # Plot TPR-FPR distribution
     sns.lineplot(x=df.signal_ratio, y=df.tpr_fpr,
-                 color="#f1a340",
+                 color=TP_COLOR,
                  ax=ax3)
     ax3.set_xlabel("Signal Intensity Ratio")
     ax3.set_ylabel("TPR - FPR")

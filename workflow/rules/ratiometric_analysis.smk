@@ -19,10 +19,10 @@ SAMPLES = ["t4_1_hrp_1",
 
 
 rule all:
-    input: 
-        "../results/pl_proteomics/pl_results/t4t5_consensus_surfaceome.csv",
-        "../results/pl_proteomics/pl_results/pca_analysis.svg",
-        "../results/pl_proteomics/pl_results/venn_diagram.svg"
+    input:
+        "../results/t4t5_surface_proteomics/t4t5_consensus_surfaceome.csv",
+        "../results/t4t5_surface_proteomics/pca_analysis.svg",
+        "../results/t4t5_surface_proteomics/venn_diagram.svg"
 
 
 rule run_analysis:
@@ -88,16 +88,16 @@ rule plot_venn_diagram:
 
 rule move_outputs:
     input:
-        "t4t5_consensus_surfaceome.csv", 
+        "t4t5_consensus_surfaceome.csv",
         "pca_analysis.svg",
         "venn_diagram.svg"
     params:
-        "../results/pl_proteomics/pl_results/"
+        "../results/t4t5_surface_proteomics/"
     output:
-        "../results/pl_proteomics/pl_results/t4t5_consensus_surfaceome.csv", 
-        "../results/pl_proteomics/pl_results/pca_analysis.svg",
-        "../results/pl_proteomics/pl_results/venn_diagram.svg"
+        "../results/t4t5_surface_proteomics/t4t5_consensus_surfaceome.csv",
+        "../results/t4t5_surface_proteomics/pca_analysis.svg",
+        "../results/t4t5_surface_proteomics/venn_diagram.svg"
     shell:
         """
-        mv {input} {params}
+        mv {input} t4_* t5_* {params}
         """

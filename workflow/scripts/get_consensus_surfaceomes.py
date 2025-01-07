@@ -18,18 +18,18 @@ def get_consensus_surfaceomes(data):
                             "Sample",
                             "Control"])
     t4 = df[df.Sample.isin(["t4_1", "t4_2"])]
-    m = [i[1].signal_ratio.mean() for i in t4.groupby("Protein")]
+    m = [i[1].signal_ratio.median() for i in t4.groupby("Protein")]
     p = [i[0] for i in t4.groupby("Protein")]
     t4_dic = dict(zip(p, m))
     t5 = df[df.Sample.isin(["t5_1", "t5_2"])]
-    m = [i[1].signal_ratio.mean() for i in t5.groupby("Protein")]
+    m = [i[1].signal_ratio.median() for i in t5.groupby("Protein")]
     p = [i[0] for i in t5.groupby("Protein")]
     t5_dic = dict(zip(p, m))
     # Group proteins by sample
     grps = df.groupby("Sample")
     # Initialize the dict to store individual proteomes as lists
     protein_lists = {}
-    # Iterate over sample lists to assess protein repoducibility among controls
+    # Iterate over sample lists to assess protein reproducibility among controls
     for grp in grps:
         # Store sample name
         sample = grp[0]
@@ -49,25 +49,16 @@ def get_consensus_surfaceomes(data):
     t4 = pd.DataFrame(data=[t4_prot, t4_prot]).T
     t4.columns = ["Protein", "T4_signal"]
     t4.T4_signal.replace(t4_dic, inplace=True)
-    # t4.set_index("Proteins", inplace=True)
     t4 = t4.sort_values(by=["T4_signal"], ascending=False)
-    # t4.to_csv("t4_consensus_surfaceome.csv")
+    t4.to_csv("t4_consensus_surfaceome.csv")
 
     t5 = pd.DataFrame(data=[t5_prot, t5_prot]).T
     t5.columns = ["Protein", "T5_signal"]
     t5.T5_signal.replace(t5_dic, inplace=True)
-    # t5.set_index("Proteins", inplace=True)
     t5 = t5.sort_values(by=["T5_signal"], ascending=False)
-    # t5.to_csv("t5_consensus_surfaceome.csv")
+    t5.to_csv("t5_consensus_surfaceome.csv")
     df = t4.merge(t5, how="outer").fillna(0)
     df.to_csv("t4t5_consensus_surfaceome.csv", index=False)
-
-    # (pd.Series(list(t4_prot), name="Protein")
-    #  .to_csv("t4_consensus_surfaceome.csv", index=False)
-    #  )
-    # (pd.Series(list(t5_prot), name="Protein")
-    #  .to_csv("t5_consensus_surfaceome.csv", index=False)
-    #  )
 
 
 @click.command()
