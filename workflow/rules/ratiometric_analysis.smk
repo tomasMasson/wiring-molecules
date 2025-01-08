@@ -1,3 +1,5 @@
+import pandas as pd
+
 SAMPLES = ["t4_1_hrp_1",
            "t4_1_hrp_2",
            "t4_2_hrp_1",
@@ -22,7 +24,9 @@ rule all:
     input:
         "../results/t4t5_surface_proteomics/t4t5_consensus_surfaceome.csv",
         "../results/t4t5_surface_proteomics/pca_analysis.svg",
-        "../results/t4t5_surface_proteomics/venn_diagram.svg"
+        "../results/t4t5_surface_proteomics/venn_diagram.svg",
+        "../results/t4t5_surface_proteomics/flybase_physical_interactions.tsv.gz",
+        "../results/t4t5_surface_proteomics/t4t5_surfaceome_physical_interactions.csv"
 
 
 rule run_analysis:
@@ -101,3 +105,29 @@ rule move_outputs:
         """
         mv {input} t4_* t5_* {params}
         """
+
+rule get_flybase_physical_interactions:
+    params: "https://ftp.flybase.net/releases/current/precomputed_files/genes/physical_interactions_mitab_fb_2024_06.tsv.gz"
+    output:
+        "../results/t4t5_surface_proteomics/flybase_physical_interactions.tsv.gz"
+    shell:
+        "wget {params} -O {output}"
+
+rule :
+    input:
+        "../results/t4t5_surface_proteomics/t4t5_consensus_surfaceome.csv",
+        "../results/t4t5_surface_proteomics/flybase_physical_interactions.tsv.gz",
+        "../resources/flyxcdb_data.csv"
+    output:
+        "../results/t4t5_surface_proteomics/t4t5_surfaceome_physical_interactions.csv"
+    run:
+        df = pd.read_csv(input[0])
+        interactions = pd.read_csv(input[1], sep="\t")
+        flyxcdb = pd.read_csv(input[2])
+        interactions["#ID(s) Interactor A"] = interactions["#ID(s) Interactor A"].str.split(":", expand=True)[1]
+        interactions["ID(s) Interactor B"] = interactions["ID(s) Interactor B"].str.split(":", expand=True)[1]
+        subset = interactions[interactions["#ID(s) Interactor A"].isin(df.Protein)]
+        subset2 = subset[subset["ID(s) Interactor B"].isin(df.Protein)]
+        subset3 = subset2[subset2["#ID(s) Interactor A"].isin(flyxcdb.GeneID)]
+        subset4 = subset3[subset3["ID(s) Interactor B"].isin(flyxcdb.GeneID)]
+        subset4.to_csv(output[0])
