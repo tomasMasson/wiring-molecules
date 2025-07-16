@@ -1,4 +1,6 @@
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 SAMPLES = ["t4_1_hrp_1",
            "t4_1_hrp_2",
@@ -25,8 +27,8 @@ rule all:
         "../results/t4t5_surface_proteomics/t4t5_consensus_surfaceome.csv",
         "../results/t4t5_surface_proteomics/pca_analysis.svg",
         "../results/t4t5_surface_proteomics/venn_diagram.svg",
-        "../results/t4t5_surface_proteomics/flybase_physical_interactions.tsv.gz",
-        "../results/t4t5_surface_proteomics/t4t5_surfaceome_physical_interactions.csv"
+        "../results/t4t5_surface_proteomics/t4t5_surfaceome_physical_interactions.csv",
+        "../results/t4t5_surface_proteomics/cell_adhesion_molecules_abundance.svg"
 
 
 rule run_analysis:
@@ -51,9 +53,10 @@ rule merge_outputs:
     output:
         temp("t4t5_signficant_proteins.csv")
     shell:
+        # cat {input} > {output} && \
+        # rm t4_*.csv t5_*.csv
         """
-        cat {input} > {output} && \
-        rm t4_*.csv t5_*.csv
+        cat {input} > {output}
         """
 
 
@@ -106,17 +109,17 @@ rule move_outputs:
         mv {input} t4_* t5_* {params}
         """
 
-rule get_flybase_physical_interactions:
-    params: "https://ftp.flybase.net/releases/current/precomputed_files/genes/physical_interactions_mitab_fb_2024_06.tsv.gz"
-    output:
-        "../results/t4t5_surface_proteomics/flybase_physical_interactions.tsv.gz"
-    shell:
-        "wget {params} -O {output}"
+# rule get_flybase_physical_interactions:
+#     params: "https://ftp.flybase.net/releases/current/precomputed_files/genes/physical_interactions_mitab_fb_2024_06.tsv.gz"
+#     output:
+#         "../results/t4t5_surface_proteomics/flybase_physical_interactions.tsv.gz"
+#     shell:
+#         "wget {params} -O {output}"
 
-rule :
+rule get_surfaceome_physical_interactions:
     input:
         "../results/t4t5_surface_proteomics/t4t5_consensus_surfaceome.csv",
-        "../results/t4t5_surface_proteomics/flybase_physical_interactions.tsv.gz",
+        "../resources/physical_interactions_mitab_fb_2025_03.tsv.gz",
         "../resources/flyxcdb_data.csv"
     output:
         "../results/t4t5_surface_proteomics/t4t5_surfaceome_physical_interactions.csv"
@@ -131,3 +134,44 @@ rule :
         subset3 = subset2[subset2["#ID(s) Interactor A"].isin(flyxcdb.GeneID)]
         subset4 = subset3[subset3["ID(s) Interactor B"].isin(flyxcdb.GeneID)]
         subset4.to_csv(output[0])
+
+rule plot_wiring_proteins_abundances:
+    input:
+        "../results/t4t5_surface_proteomics/t4t5_consensus_surfaceome.csv",
+        "../resources/expanded_cams_list.csv"
+    output:
+        "../results/t4t5_surface_proteomics/cell_adhesion_molecules_abundance.svg",
+    run:
+        # Load proteomic data
+        df = pd.read_csv(input[0])
+        # Load cell adhesion molecules data
+        cam = pd.read_csv(input[1])
+        # Annotate proteins as CAMs
+        df["CAM"] = df["Protein"].isin(cam["FBgn"])
+        sns.set(font_scale=1.2)
+        sns.set_style("white")
+        fig, ax = plt.subplots(figsize=(5,5))
+        dff = df.replace({True: "T4 wiring",
+                          False: "T4 surfaceome"})
+        sns.boxplot(x="CAM",
+                    y="T4_signal",
+                    data=dff[dff["T4_signal"] != 0],
+                    color="#f1a340ff",
+                    showcaps=False,
+                    linewidth=2,
+                    ax=ax)
+        dff = df.replace({True: "T5 wiring",
+                          False: "T5 surfaceome"})
+        sns.boxplot(x="CAM",
+                    y="T5_signal",
+                    data=dff[dff["T5_signal"] != 0],
+                    color="#998ec3ff",
+                    showcaps=False,
+                    linewidth=2,
+                    ax=ax)
+        ax.set_ylim(0, 1.05)
+        ax.tick_params(axis='x', labelrotation=30)
+        ax.set_xlabel("")
+        ax.set_ylabel("Log$_{2}$(Abundance enrichment)")
+        plt.tight_layout()
+        plt.savefig(output[0])
