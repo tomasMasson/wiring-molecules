@@ -3,6 +3,12 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from scipy.stats import shapiro
+from scipy.stats import levene
+from scipy.stats import ttest_ind
+# Suppress matplotlib warnings
+import matplotlib
+matplotlib.use('agg')
 
 SAMPLES = ["t4_1_hrp_1",
            "t4_1_hrp_2",
@@ -64,6 +70,7 @@ rule all:
         "../results/t4t5_surface_proteomics/venn_diagram.svg",
         "../results/t4t5_surface_proteomics/t4t5_surfaceome_physical_interactions.csv",
         "../results/t4t5_surface_proteomics/cell_adhesion_molecules_abundance.svg",
+        "../results/t4t5_surface_proteomics/cell_adhesion_molecules_abundance_statistical_analysis.csv",
         "../results/t4t5_surface_proteomics/cell_adhesion_molecules_expression.svg"
 
 
@@ -172,6 +179,7 @@ rule plot_wiring_proteins_abundances:
         "../resources/expanded_cams_list.csv"
     output:
         "../results/t4t5_surface_proteomics/cell_adhesion_molecules_abundance.svg",
+        "../results/t4t5_surface_proteomics/cell_adhesion_molecules_abundance_statistical_analysis.csv"
     run:
         # Load proteomic data
         df = pd.read_csv(input[0])
@@ -179,11 +187,17 @@ rule plot_wiring_proteins_abundances:
         cam = pd.read_csv(input[1])
         # Annotate proteins as CAMs
         df["CAM"] = df["Protein"].isin(cam["FBgn"])
-        sns.set(font_scale=1.2)
+        # Define plotting style
+        sns.set(font_scale=1.2,
+                rc={"font.family":"sans-serif",
+                "font.sans-serif":["Carlito"]})
         sns.set_style("white")
+        # Initialize plot
         fig, ax = plt.subplots(figsize=(4,4))
+        # Label X-axis
         dff = df.replace({True: "T4 Wiring",
                           False: "T4 Dataset"})
+        # Plotting T4 data
         sns.boxplot(x="CAM",
                     y="T4_signal",
                     data=dff[dff["T4_signal"] != 0],
@@ -191,8 +205,10 @@ rule plot_wiring_proteins_abundances:
                     showcaps=False,
                     linewidth=2,
                     ax=ax)
+        # Label X-axis again for T5
         dff = df.replace({True: "T5 Wiring",
                           False: "T5 Dataset"})
+        # Plotting T5 data
         sns.boxplot(x="CAM",
                     y="T5_signal",
                     data=dff[dff["T5_signal"] != 0],
@@ -200,12 +216,24 @@ rule plot_wiring_proteins_abundances:
                     showcaps=False,
                     linewidth=2,
                     ax=ax)
+        # Plot annotation
         ax.set_ylim(0, 1.05)
         ax.tick_params(axis='x', labelrotation=15)
         ax.set_xlabel("")
         ax.set_ylabel("Log$_{2}$(Abundance enrichment)")
         plt.tight_layout()
         plt.savefig(output[0])
+        # Statistical analysis
+        with open(output[1], "w") as fh:
+            # Shapiro-Wilk test for normality
+            fh.write(f'T4 CAM abundance Shapiro test:\n{shapiro(df[(df["CAM"] == True)&(df["T4_signal"] != 0)]["T4_signal"])}\n\n')
+            fh.write(f'T4 dataset abundance Shapiro test:\n{shapiro(df[(df["CAM"] == False)&(df["T4_signal"] != 0)]["T4_signal"])}\n\n')
+            fh.write(f'T4 CAM vs dataset abundance Levene test:\n{levene(df[(df["CAM"] == True)&(df["T4_signal"] != 0)]["T4_signal"], df[(df["CAM"] == False)&(df["T4_signal"] != 0)]["T4_signal"])}\n\n')
+            fh.write(f'T4 CAM vs dataset T-test:\n{ttest_ind(df[(df["CAM"] == True)&(df["T4_signal"] != 0)]["T4_signal"], df[(df["CAM"] == False)&(df["T4_signal"] != 0)]["T4_signal"])}\n\n')
+            fh.write(f'T5 CAM abundance Shapiro test:\n{shapiro(df[(df["CAM"] == True)&(df["T5_signal"] != 0)]["T5_signal"])}\n\n')
+            fh.write(f'T5 dataset abundance Shapiro test:\n{shapiro(df[(df["CAM"] == False)&(df["T5_signal"] != 0)]["T5_signal"])}\n\n')
+            fh.write(f'T5 CAM vs dataset abundance Levene test:\n{levene(df[(df["CAM"] == True)&(df["T5_signal"] != 0)]["T5_signal"], df[(df["CAM"] == False)&(df["T5_signal"] != 0)]["T5_signal"])}\n\n')
+            fh.write(f'T5 CAM vs dataset T-test:\n{ttest_ind(df[(df["CAM"] == True)&(df["T5_signal"] != 0)]["T5_signal"], df[(df["CAM"] == False)&(df["T5_signal"] != 0)]["T5_signal"])}\n\n')
 
 
 rule plot_non_expressed_adhesion_molecules:
@@ -250,13 +278,18 @@ rule plot_non_expressed_adhesion_molecules:
         df = df.groupby("FBgn")["Expression"].max()
         df = df.sort_values(ascending=False)
         # Plot expression data
-        sns.set(font_scale=1.2)
+        sns.set(font_scale=1.2,
+                rc={"font.family":"sans-serif",
+                "font.sans-serif":["Carlito"]})
         sns.set_style("white")
         fig, ax = plt.subplots(figsize=(4,4))
-        sns.scatterplot(x=range(len(df)), y=np.log1p(df.values), color="gray", linewidth=0, s=16, ax=ax)
+        sns.scatterplot(x=range(len(df)), y=np.log1p(df.values), color="#636363", s=30, ax=ax)
+        ax.set_ylim(0, len(df))
         ax.set_ylim(-.2, 4.6)
         ax.set_xlabel("Ranked Cell Adhesion Molecules")
         ax.set_ylabel("Log1p(Maximum Expression)")
+        ax.fill_between(range(len(df)), -1, 4.6, where=np.log1p(df.values) < np.log1p(1), color="#cccccc", alpha=0.4)
+        ax.text(10, 4, "All T4T5 subtypes", fontsize=12)
+        ax.axhline(np.log1p(1), color="black", linestyle="--")
         plt.tight_layout()
-        plt.axhline(.5, color="black", linestyle="--")
         plt.savefig(output[0])
