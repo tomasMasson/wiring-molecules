@@ -20,3 +20,9 @@ orthogroups: https://data.orthodb.org/download/odb11v0_OG2genes.tab.gz
 species: https://data.orthodb.org/download/odb11v0_species.tab.gz
 gene_xrefs: https://data.orthodb.org/download/odb11v0_gene_xrefs.tab.gz
 uniprot: https://ftp.flybase.net/releases/FB2023_02/precomputed_files/genes/fbgn_NAseq_Uniprot_fb_2023_02.tsv.gz
+RNA_TPM_DATA_LINK: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE116nnn/GSE116969/suppl/GSE116969_dataTable7a.genes_x_cells_TPM.modeled_genes.txt.gz
+RNA_PROBABILITIES_DATA_LINK: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE116nnn/GSE116969/suppl/GSE116969_dataTable7b.genes_x_cells_p_expression.modeled_genes.txt.gz
+FLYATLAS2_LINK: https://motif.mvls.gla.ac.uk/downloads/FlyAtlas2_gene_data.xlsx
+OEZEL_FELIX_DATASET: https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE142787&format=file&file=GSE142787%5FMixture%5Fmodeling%2Exlsx
+OEZEL_FELIX_DATASET_NAME: ../results/expression_data_integration/GSE142787_Mixture_modeling.xlsx
+OEZEL_FELIX_DATASET_ANNOTATION: https://static-content.springer.com/esm/art%3A10.1038%2Fs41586-020-2879-3/MediaObjects/41586_2020_2879_MOESM4_ESM.xlsx

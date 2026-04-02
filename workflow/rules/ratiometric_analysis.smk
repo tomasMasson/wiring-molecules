@@ -3,13 +3,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import shapiro
-from scipy.stats import levene
-from scipy.stats import ttest_ind
+from scipy.stats import shapiro, levene, ttest_ind, pearsonr
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 # Suppress matplotlib warnings
 import matplotlib
 matplotlib.use('agg')
 
+# Naming scheme for all samples
 SAMPLES = ["t4_1_hrp_1",
            "t4_1_hrp_2",
            "t4_2_hrp_1",
@@ -29,6 +30,65 @@ SAMPLES = ["t4_1_hrp_1",
 
 
 ### Auxiliary functions
+
+def plot_pca(data):
+    """
+    Generate a PCA plot for each sample based on the measured intensities
+    """
+
+    # Ingest data
+    df = pd.read_csv(data, sep="\t").fillna(0)
+    # Extract channel values and standarize them
+    channels = StandardScaler().fit_transform(df.iloc[:, 2:].T)
+    # Initialize PCA object
+    pca = PCA(n_components=2)
+    v1, v2 = (pca.fit(channels).explained_variance_ratio_)
+    v1 = round(v1, 4) * 100
+    v2 = round(v2, 4) * 100
+    # Fit PCA model
+    pca_components = pca.fit_transform(channels)
+    # Load PCA into a DataFrame for plotting and add sample labels
+    pca_df = pd.DataFrame(data=pca_components, columns=["PC1", "PC2"])
+    pca_df["Sample"] = ["HRP_1", "H2O2_1",
+                        "HRP_2", "H2O2_2",
+                        "T4_1", "T4_2",
+                        "T5_1", "T5_2"]
+    # Plot PCA scatterplot
+    sns.set(style="white", font="Carlito", font_scale=2.6, rc={"lines.linewidth": 3, "axes.grid": False, "savefig.transparent": False})
+    f, ax1 = plt.subplots(figsize=(8, 6))
+    sns.scatterplot(x="PC1", y="PC2", data=pca_df, hue="Sample", legend=False, s=180, palette=["#808080", "#808080", "#808080", "#808080", "#f1a340", "#f1a340", "#998ec3", "#998ec3"], ax=ax1)
+    ax1.set_xlabel(f"PC1 ({v1}%)")
+    ax1.set_ylabel(f"PC2 ({v2}%)")
+    plt.tight_layout()
+    plt.savefig("pca_analysis.svg")
+
+
+def plot_replicates_correlation(data):
+    "Generates graph depicting the correlation between the replicates for each driver line, T4 and T5"
+
+    # Ingest data
+    df = pd.read_csv(data, sep="\t").fillna(0)
+    # Set plotting style
+    sns.set(style="white", font="Carlito", font_scale=2.6, rc={"lines.linewidth": 3, "axes.grid": False, "savefig.transparent": False})
+    f, axs = plt.subplots(ncols=2, figsize=(8, 6))
+    # Plot intensity values for each replicates
+    sns.scatterplot(x=df.t4_1, y=df.t4_2, color="#f1a340", ax=axs[0])
+    sns.scatterplot(x=df.t5_1, y=df.t5_2, color="#998ec3", ax=axs[1])
+    # Define axis limits and labels
+    axs[0].set_xlabel("T4_1 intensity ")
+    axs[0].set_ylabel("T4_2 intensity")
+    axs[0].set_xlim([3,10])
+    axs[0].set_ylim([3,10])
+    axs[1].set_xlabel("T5_1 intensity")
+    axs[1].set_ylabel("T5_2 intensity")
+    axs[1].set_xlim([3,10])
+    axs[1].set_ylim([3,10])
+    # Save correlation (r) values
+    axs[0].text(4, 9, f"r={np.round(pearsonr(df.t4_1, df.t4_2)[0], 4)}", size="small")
+    axs[1].text(4, 9, f"r={np.round(pearsonr(df.t5_1, df.t5_2)[0], 4)}", size="small")
+    plt.tight_layout()
+    plt.savefig("replicates_correlation_analysis.svg")
+
 
 def process_scrnaseq_dataset(folder: str, prefix: str, annotation: str):
     # adata = sc.read_10x_mtx("zipursky_t4t5_scrnaseq_dataset", var_names="gene_ids", prefix="GSM3592259_T4T5_24_")
@@ -67,6 +127,7 @@ rule all:
     input:
         "../results/t4t5_surface_proteomics/t4t5_consensus_surfaceome.csv",
         "../results/t4t5_surface_proteomics/pca_analysis.svg",
+        "../results/t4t5_surface_proteomics/replicates_correlation_analysis.svg",
         "../results/t4t5_surface_proteomics/venn_diagram.svg",
         "../results/t4t5_surface_proteomics/t4t5_surfaceome_physical_interactions.csv",
         "../results/t4t5_surface_proteomics/cell_adhesion_molecules_abundance.svg",
@@ -74,7 +135,7 @@ rule all:
         "../results/t4t5_surface_proteomics/cell_adhesion_molecules_expression.svg"
 
 
-rule run_analysis:
+rule run_ratiometric_analysis:
     input:
         dataset="../resources/t4vt5_pl_dataset.csv",
         mappings="../resources/uniprot2flybase.tab",
@@ -90,14 +151,12 @@ rule run_analysis:
         """
 
 
-rule merge_outputs:
+rule merge_significant_proteins:
     input:
         expand("{sample}.csv", sample=SAMPLES)
     output:
         temp("t4t5_signficant_proteins.csv")
     shell:
-        # cat {input} > {output} && \
-        # rm t4_*.csv t5_*.csv
         """
         cat {input} > {output}
         """
@@ -119,10 +178,17 @@ rule plot_pca_analysis:
         "../resources/t4vt5_pl_dataset.csv"
     output:
         "pca_analysis.svg"
-    shell:
-        """
-        scripts/plot_pca.py --data {input}
-        """
+    run:
+        plot_pca(input[0])
+
+
+rule plot_replicates_correlation_analysis:
+    input:
+        "../resources/t4vt5_pl_dataset.csv"
+    output:
+        "replicates_correlation_analysis.svg"
+    run:
+        plot_replicates_correlation(input[0])
 
 
 rule plot_venn_diagram:
@@ -139,6 +205,7 @@ rule plot_venn_diagram:
 rule move_outputs:
     input:
         "t4t5_consensus_surfaceome.csv",
+        "replicates_correlation_analysis.svg",
         "pca_analysis.svg",
         "venn_diagram.svg"
     params:
@@ -146,6 +213,7 @@ rule move_outputs:
     output:
         "../results/t4t5_surface_proteomics/t4t5_consensus_surfaceome.csv",
         "../results/t4t5_surface_proteomics/pca_analysis.svg",
+        "../results/t4t5_surface_proteomics/replicates_correlation_analysis.svg",
         "../results/t4t5_surface_proteomics/venn_diagram.svg"
     shell:
         """

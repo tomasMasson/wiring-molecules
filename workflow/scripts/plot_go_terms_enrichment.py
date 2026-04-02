@@ -17,15 +17,27 @@ def plot_go_terms_enrichment(data, go_class):
     df["-log10(FDR)"] = -np.log10(df["FDR"])
     t4 = df[df["Neuron"] == "T4"]
     t5 = df[df["Neuron"] == "T5"]
-    t5["-log10(FDR)"] = t5["-log10(FDR)"].mul(-1)
+    t4["-log10(FDR)"] = t4["-log10(FDR)"].mul(-1)
     dff = pd.concat([t4, t5])
+    if dff["-log10(FDR)"].max() > -1 * dff["-log10(FDR)"].min():
+        xlim = dff["-log10(FDR)"].max()
+    else:
+        xlim = -1 * dff["-log10(FDR)"].min()
+    dff = dff.sort_values(by="-log10(FDR)")
     # Plot GO terms barplot
-    sns.set(style="darkgrid", font_scale=3,
+    sns.set(style="white",
+            font="Carlito",
+            font_scale=2.4,
             rc={"lines.linewidth": 2})
-    f, ax1 = plt.subplots(figsize=(14, 10))
+    if go_class == "Biological Process":
+        f, ax1 = plt.subplots(figsize=(10, 5))
+    elif go_class == "Cellular Component":
+        f, ax1 = plt.subplots(figsize=(14, 5))
     p = sns.barplot(x="-log10(FDR)", y="Description", data=dff, palette=["#f1a340", "#998ec3"], hue="Neuron", dodge=False, ax=ax1)
     p.legend_.remove()
+    p.set_xlim(-xlim, xlim)
     p.set_ylabel("")
+    sns.despine(left=True)
     if go_class == "BP":
         ax1.set_title("Biological Process",
                       weight="bold")

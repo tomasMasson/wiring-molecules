@@ -14,7 +14,7 @@ from scipy.stats import ranksums
 
 
 def map_identifiers(data, mapping):
-    "Renames UniProt identifiers into FLyBase ones"
+    "Renames UniProt identifiers into FlyBase ones"
     # Initialize a dict to store mappings
     map_dic = {}
     # Scan all the protein ids on the table
@@ -100,7 +100,7 @@ def compute_tpr_fpr(df):
     Computes true positive rate, false positive rate and false discovery rate for the sample and control
     """
 
-    # Compute rates for TP, FP and False Discovery Rate  (FDR)
+    # Compute rates for TP, FP and False Discovery Rate (FDR)
     return (df
             .assign(tpr=df.tp.cumsum() / df.tp.sum(),
                     fpr=df.fp.cumsum() / df.fp.sum(),
@@ -139,15 +139,19 @@ def plot_ratiometric_analysis(df, sample, control):
     elif sample.startswith("t5"):
         TP_COLOR = "#998ec3"
     FP_COLOR = "#808080"
-    # Compute pvalue and AUC score
+    # Compute FDR, pvalue and AUC score
+    fdr = str(np.round(df[df.signal_ratio > df.loc[df.tpr_fpr.idxmax(), "signal_ratio"]]["fdr"].iloc[-1] * 100, 2))
     pvalue = np.format_float_scientific(ranksums(df.tpr, df.fpr, alternative="greater")[1], precision=1)
-    auc = str(np.round(np.trapz(df.tpr, df.fpr), 4))
+    #Get TPR - FPR threshold
+    threshold = df.loc[df.tpr_fpr.idxmax(), "signal_ratio"]
+    auc = str(np.round(np.trapz(df.tpr, df.fpr), 2))
     # Define curve for random classifier
     line = pd.DataFrame({"x": np.linspace(df.fpr.min(), df.fpr.max(), 10),
                          "y": np.linspace(df.tpr.min(), df.tpr.max(), 10)})
 
     # Increase font size
-    sns.set(style="darkgrid", font_scale=1.6, rc={"lines.linewidth": 3})
+    sns.set(style="white", font="Carlito", font_scale=2.6, rc={"lines.linewidth": 3, "axes.grid": False, "savefig.transparent": False})
+
     # Define panels
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16,5))
     # Plot ROC curve for sample
@@ -161,8 +165,9 @@ def plot_ratiometric_analysis(df, sample, control):
     # Set axes names
     ax1.set_xlabel("False Positive Rate (FPR)")
     ax1.set_ylabel("True Postive Rate (TPR)")
-    ax1.text(0.02, 0.94, f"AUC={auc}")
-    ax1.text(0.02, 0.84, f"p-value={pvalue}")
+    ax1.text(0.02, 0.94, f"p-value={pvalue}", size="x-small")
+    ax1.text(0.02, 0.82, f"AUC={auc}", size="x-small")
+    ax1.text(0.02, 0.70, f"FDR={fdr}%", size="x-small")
     # Plot TP and FP distributions
     tp =df[df.tp == 1].signal_ratio
     fp =df[df.fp == 1].signal_ratio
@@ -180,6 +185,7 @@ def plot_ratiometric_analysis(df, sample, control):
     ax2.set_xlabel("Signal Intensity Ratio")
     ax2.set_xlim(-1.5, 1.5)
     ax2.set_ylim(0, 0.34)
+    ax2.set_title(f"{sample}_vs_{control}")
     # Plot TPR-FPR distribution
     sns.lineplot(x=df.signal_ratio, y=df.tpr_fpr,
                  color=TP_COLOR,
@@ -188,6 +194,7 @@ def plot_ratiometric_analysis(df, sample, control):
     ax3.set_ylabel("TPR - FPR")
     ax3.set_xlim(-2, 2)
     ax3.set_ylim(-0.1, 0.6)
+    ax3.axvline(threshold, color="black", alpha=.6, linestyle="--")
     # Fix legend overlap
     plt.tight_layout(h_pad=2)
     # Save figure
